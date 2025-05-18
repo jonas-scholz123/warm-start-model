@@ -9,7 +9,7 @@ from torchvision.datasets import MNIST
 from torchvision.utils import make_grid, save_image
 from tqdm import tqdm
 
-from scaffolding_v3.util.instantiate import load_config
+from cdnp.util.instantiate import load_config
 
 
 class ResidualConvBlock(nn.Module):

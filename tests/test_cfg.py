@@ -1,8 +1,8 @@
 import pytest
 from hydra import compose, initialize
 
+from cdnp.util.instantiate import Experiment
 from config.config import Config, init_configs
-from scaffolding_v3.util.instantiate import Experiment
 
 
 @pytest.mark.parametrize(

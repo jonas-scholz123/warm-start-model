@@ -13,9 +13,9 @@ from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
+from cdnp.data.data import make_dataset
+from cdnp.plot.plotter import Plotter
 from config.config import Config, init_configs
-from scaffolding_v3.data.data import make_dataset
-from scaffolding_v3.plot.plotter import Plotter
 
 
 @dataclass

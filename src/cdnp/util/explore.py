@@ -9,8 +9,8 @@ from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath, get_experiment_paths
 from torch.nn import Module
 
+from cdnp.util.config_filter import DryRunFilter, ModelFilter
 from config.config import Config, init_configs
-from scaffolding_v3.util.config_filter import DryRunFilter, ModelFilter
 
 
 def setup(

@@ -19,14 +19,14 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
+from cdnp.evaluate import evaluate
+from cdnp.plot.plotter import Plotter
+from cdnp.util.instantiate import Experiment
 from config.config import (
     CheckpointOccasion,
     Config,
     init_configs,
 )
-from scaffolding_v3.evaluate import evaluate
-from scaffolding_v3.plot.plotter import Plotter
-from scaffolding_v3.util.instantiate import Experiment
 
 init_configs()
 

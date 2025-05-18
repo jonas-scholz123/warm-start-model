@@ -1,9 +1,9 @@
 # %%
 from hydra import compose
 
+from cdnp.util.explore import load_best_weights
+from cdnp.util.instantiate import Experiment
 from config.config import Config, init_configs
-from scaffolding_v3.util.explore import load_best_weights
-from scaffolding_v3.util.instantiate import Experiment
 
 cs = init_configs()
 

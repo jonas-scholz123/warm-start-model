@@ -1,4 +1,4 @@
-# scaffolding-v3
+# cdnp
 
 Create a .env file with the following contents:
 
@@ -22,13 +22,13 @@ data in {"cifar10", "mnist"},
 E.g.
 
 ```
-python src/scaffolding_v3/train.py mode=dev
+python src/cdnp/train.py mode=dev
 ```
 
 for a dry run and
 
 ```
-python src/scaffolding_v3/train.py mode=prod
+python src/cdnp/train.py mode=prod
 ```
 
 for a real training run.

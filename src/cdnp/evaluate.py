@@ -14,9 +14,9 @@ from torch import nn
 from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
+from cdnp.data.data import make_dataset
+from cdnp.util.config_filter import DryRunFilter
 from config.config import SKIP_KEYS, Config, Paths, init_configs
-from scaffolding_v3.data.data import make_dataset
-from scaffolding_v3.util.config_filter import DryRunFilter
 
 logger.configure(handlers=[{"sink": sys.stdout, "level": "INFO"}])
 

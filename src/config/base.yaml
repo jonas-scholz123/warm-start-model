@@ -27,7 +27,7 @@ loss:
   _target_: torch.nn.NLLLoss
 
 model:
-  _target_: scaffolding_v3.model.convnet.ConvNet
+  _target_: cdnp.model.convnet.ConvNet
   in_channels: ${data.in_channels}
   num_classes: ${data.num_classes}
   sidelength: ${data.sidelength}
@@ -43,13 +43,13 @@ optimizer:
 output:
   save_checkpoints: True
   out_dir: ${runtime.root}/_output
-  wandb_project: scaffolding-v3
+  wandb_project: cdnp
   log_gradients: false
   gradient_log_freq: 100
   use_tqdm: false
   log_level: INFO
   plotter:
-    _target_: scaffolding_v3.plot.plotter.Plotter
+    _target_: cdnp.plot.plotter.Plotter
     _partial_: true
     device: ${runtime.device}
     sample_indices: [0, 1, 2, 3]

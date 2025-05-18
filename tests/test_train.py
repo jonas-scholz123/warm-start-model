@@ -2,8 +2,8 @@
 
 from hydra import compose, initialize
 
+from cdnp.train import Trainer
 from config.config import Config, init_configs
-from scaffolding_v3.train import Trainer
 
 
 def test_trainer_initialises() -> None:

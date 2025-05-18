@@ -1,8 +1,8 @@
 # %%
 from mlbnb.examples import find_best_examples
 
-from scaffolding_v3.util.explore import load_best_weights, setup
-from scaffolding_v3.util.instantiate import Experiment
+from cdnp.util.explore import load_best_weights, setup
+from cdnp.util.instantiate import Experiment
 
 cfg = setup(overrides=["data.testloader.batch_size=1"])
 
