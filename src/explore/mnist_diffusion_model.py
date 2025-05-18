@@ -1,20 +1,3 @@
-"""
-This script does conditional image generation on MNIST, using a diffusion model
-
-This code is modified from,
-https://github.com/cloneofsimo/minDiffusion
-
-Diffusion model is based on DDPM,
-https://arxiv.org/abs/2006.11239
-
-The conditioning idea is taken from 'Classifier-Free Diffusion Guidance',
-https://arxiv.org/abs/2207.12598
-
-This technique also features in ImageGen 'Photorealistic Text-to-Image Diffusion Modelswith Deep Language Understanding',
-https://arxiv.org/abs/2205.11487
-
-"""
-
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -25,6 +8,8 @@ from torchvision import transforms
 from torchvision.datasets import MNIST
 from torchvision.utils import make_grid, save_image
 from tqdm import tqdm
+
+from scaffolding_v3.util.instantiate import load_config
 
 
 class ResidualConvBlock(nn.Module):
@@ -254,7 +239,8 @@ class DDPM(nn.Module):
         )
 
         # return MSE between added noise, and our predicted noise
-        return self.loss_mse(noise, self.nn_model(x_t, c, _ts / self.n_T, context_mask))
+        pred_noise = self.nn_model(x_t, c, _ts / self.n_T, context_mask)
+        return self.loss_mse(noise, pred_noise)
 
     def sample(self, n_sample, size, device, guide_w=0.0):
         # we follow the guidance sampling scheme described in 'Classifier-Free Diffusion Guidance'
@@ -319,7 +305,9 @@ def train_mnist():
     n_feat = 128  # 128 ok, 256 better (but slower)
     lrate = 1e-4
     save_model = False
-    save_dir = "./data/diffusion_outputs10/"
+
+    cfg = load_config()
+    save_dir = str(cfg.paths.output / "mnist_diffusion") + "/"
     ws_test = [0.0, 0.5, 2.0]  # strength of generative guidance
 
     ddpm = DDPM(
@@ -444,3 +432,5 @@ def train_mnist():
 
 if __name__ == "__main__":
     train_mnist()
+
+# %%
