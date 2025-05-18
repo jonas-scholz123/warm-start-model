@@ -43,15 +43,16 @@ class Experiment:
         logger.info("Instantiating dependencies")
 
         exp = instantiate(cfg)
-        rng = exp.generator.manual_seed(cfg.execution.seed)
+        rng = exp.rng.generator.manual_seed(cfg.execution.seed)
+        cpu_rng = exp.rng.cpu_generator.manual_seed(cfg.execution.seed + 1)
 
-        trainset = make_dataset(exp.data, Split.TRAIN, rng)
-        valset = make_dataset(exp.data, Split.VAL, rng)
-        testset = make_dataset(exp.data, Split.TEST, rng)
+        trainset = make_dataset(exp.data, Split.TRAIN, cpu_rng)
+        valset = make_dataset(exp.data, Split.VAL, cpu_rng)
+        testset = make_dataset(exp.data, Split.TEST, cpu_rng)
 
-        train_loader: DataLoader = exp.data.trainloader(trainset, generator=rng)
-        val_loader: DataLoader = exp.data.testloader(valset, generator=rng)
-        test_loader: DataLoader = exp.data.testloader(testset, generator=rng)
+        train_loader: DataLoader = exp.data.trainloader(trainset, generator=cpu_rng)
+        val_loader: DataLoader = exp.data.testloader(valset, generator=cpu_rng)
+        test_loader: DataLoader = exp.data.testloader(testset, generator=cpu_rng)
 
         loss_fn: Module = exp.loss.to(cfg.runtime.device)
         model: Module = exp.model.to(cfg.runtime.device)

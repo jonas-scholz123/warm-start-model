@@ -71,20 +71,26 @@ class OutputConfig:
     gradient_log_freq: int
     use_tqdm: bool
     log_level: str
-    plotter: dict
+    plotter: Optional[dict]
+
+
+@dataclass
+class RngConfig:
+    generator: dict
+    cpu_generator: dict
 
 
 @dataclass
 class RuntimeConfig:
     device: str
-    root: Path
+    root: str
 
 
 @dataclass
 class Config:
     runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
     data: DataConfig = MISSING
-    generator: dict = MISSING
+    rng: RngConfig = MISSING
     model: dict = MISSING
     loss: dict = MISSING
     optimizer: dict = MISSING
@@ -99,7 +105,7 @@ def _get_runtime_cfg() -> RuntimeConfig:
     Get the runtime configuration, containing values that the yaml config needs that are
     only available at runtime.
     """
-    root = Path(__file__).resolve().parent.parent.parent
+    root = str(Path(__file__).resolve().parent.parent.parent)
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     return RuntimeConfig(device=device, root=root)

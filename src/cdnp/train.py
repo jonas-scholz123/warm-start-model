@@ -40,9 +40,6 @@ def main(cfg: Config) -> float:
 
         logger.debug(OmegaConf.to_yaml(cfg))
 
-        if cfg.runtime.device == "cuda":
-            torch.set_default_device("cuda")
-
         seed_everything(cfg.execution.seed)
 
         trainer = Trainer.from_config(cfg)
@@ -264,12 +261,11 @@ class Trainer:
                 target = target.to(device)
 
             with p.profile("forward"):
-                output = self.model(features)
-                batch_loss = self.loss_fn(output, target)
+                loss = self.model(features, target)
 
             with p.profile("backward"):
-                batch_loss.backward()
-                self.metric_logger.log({"train_loss": batch_loss.item()})
+                loss.backward()
+                self.metric_logger.log({"train_loss": loss.item()})
 
             with p.profile("optimizer.step"):
                 self.optimizer.step()
@@ -294,7 +290,6 @@ class Trainer:
     def val_epoch(self) -> dict[str, float]:
         return evaluate(
             self.model,
-            self.loss_fn,
             self.val_loader,
             self.cfg.execution.dry_run,
         )

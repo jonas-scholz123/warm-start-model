@@ -16,55 +16,66 @@ paths:
   root: ${runtime.root}
   data: ${runtime.root}/_data
   raw_data: ${runtime.root}/_data/_raw
-  output: ${runtime.root}/_output
+  output: ${runtime.root}/_output/mnist_diffusion
   weights: ${runtime.root}/_weights
 
-generator:
-  _target_: torch.Generator
-  device: ${runtime.device}
+execution:
+  epochs: 20
+  seed: 42
+  start_from: LATEST
+  start_weights: null
+
+output:
+  save_checkpoints: true
+  out_dir: ${runtime.root}/_output
+  wandb_project: cdnp
+  log_gradients: false
+  gradient_log_freq: 100
+  use_tqdm: true
+  log_level: INFO
+  plotter:
+   _target_: cdnp.plot.plotter.Plotter
+   _partial_: true
+   device: ${runtime.device}
+   num_samples: 4
+   num_classes: ${data.num_classes}
+   ws_test: [0.0, 1.0]
+
+rng:
+  generator:
+    _target_: torch.Generator
+    device: ${runtime.device}
+
+  cpu_generator:
+    _target_: torch.Generator
+    device: cpu
 
 loss:
   _target_: torch.nn.NLLLoss
 
 model:
-  _target_: cdnp.model.convnet.ConvNet
-  in_channels: ${data.in_channels}
-  num_classes: ${data.num_classes}
-  sidelength: ${data.sidelength}
-  conv_channels: [32, 64]
-  linear_channels: [128]
-  use_dropout: true
+  _target_: cdnp.model.ddpm.DDPM
+  nn_model:
+    _target_: cdnp.model.unet.ContextUnet
+    in_channels: ${data.in_channels}
+    n_feat: 128
+    n_classes: ${data.num_classes}
+  betas: [1e-4, 0.02]
+  n_T: 400
+  device: ${runtime.device}
+  drop_prob: 0.1
 
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 0.1
-
-output:
-  save_checkpoints: True
-  out_dir: ${runtime.root}/_output
-  wandb_project: cdnp
-  log_gradients: false
-  gradient_log_freq: 100
-  use_tqdm: false
-  log_level: INFO
-  plotter:
-    _target_: cdnp.plot.plotter.Plotter
-    _partial_: true
-    device: ${runtime.device}
-    sample_indices: [0, 1, 2, 3]
+  lr: 1e-4
 
 scheduler:
-  _target_: torch.optim.lr_scheduler.StepLR
+  _target_: torch.optim.lr_scheduler.LinearLR
   _partial_: true
-  step_size: 10
-  gamma: 0.8
-
-execution:
-  epochs: 15
-  seed: 42
-  start_from: LATEST
-  start_weights: null
+  start_factor: 1.0
+  end_factor: 0.0
+  total_iters: ${execution.epochs}
 
 data:
   dataset:

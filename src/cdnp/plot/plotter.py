@@ -1,13 +1,16 @@
 # %%
-from typing import Any, Optional, Sequence
+from typing import Optional, Sequence
 
 import matplotlib.pyplot as plt
 import torch
-import torch.nn as nn
 from loguru import logger
+from matplotlib.animation import FuncAnimation, PillowWriter
 from matplotlib.figure import Figure
 from mlbnb.paths import ExperimentPath
 from torch.utils.data import Dataset
+from torchvision.utils import make_grid, save_image
+
+from cdnp.model.ddpm import DDPM
 
 
 class Plotter:
@@ -15,59 +18,74 @@ class Plotter:
         self,
         device: str | torch.device,
         test_data: Dataset,
+        ws_test: Sequence[float],
+        num_samples: int,
+        num_classes: int,
         save_to: Optional[ExperimentPath] = None,
-        sample_indices: Sequence[int] = [0],
     ):
         self._device = device
-        self._sample_tasks: list = [test_data[i] for i in sample_indices]
-        self._num_samples = len(sample_indices)
         self._test_data = test_data
         self._dir = save_to
+        self._ws_test = ws_test
+        self._num_samples = num_samples
+        self._num_classes = num_classes
 
-    def plot_prediction(self, model: nn.Module, epoch: int = 0) -> Optional[Figure]:
-        if self._is_image_classification_task(self._sample_tasks[0]):
-            fig = self._plot_mnist(model)
-        else:
-            logger.warning("Unplottable target type: %s", type(self._sample_tasks[0]))
-            return None
+    @torch.no_grad()
+    def plot_prediction(self, model: DDPM, epoch: int = 0) -> Optional[Figure]:
+        logger.info("Making and saving prediction plots")
+        num_samples = self._num_samples * self._num_classes
+        for w_i, w in enumerate(self._ws_test):
+            x_gen, x_gen_store = model.sample(num_samples, (1, 28, 28), guide_w=w)
 
-        if fig:
-            self._save_or_show(fig, f"{epoch}_prediction.png")
+            x_all = torch.cat([x_gen])
+            grid = make_grid(x_all * -1 + 1, nrow=10)
+            path = self._dir.at(f"image_ep{epoch}_w{w}.png")
+            save_image(grid, path)
 
-    def _is_image_classification_task(self, task: Any) -> bool:
-        if (
-            isinstance(task, tuple)
-            and len(task) == 2
-            and isinstance(task[0], torch.Tensor)
-            and isinstance(task[1], int)
-        ):
-            return True
-        return False
+            if epoch % 5 == 0:
+                self._save_gif(epoch, w, x_gen_store)
 
-    def _plot_mnist(self, model: nn.Module) -> Optional[Figure]:
+    def _save_gif(self, epoch: int, w: float, x_gen_store) -> None:
+        # create gif of images evolving over time, based on x_gen_store
         fig, axs = plt.subplots(
-            1, self._num_samples, figsize=(10, 5 * self._num_samples), squeeze=False
+            nrows=int(self._num_samples),
+            ncols=self._num_classes,
+            sharex=True,
+            sharey=True,
+            figsize=(8, 3),
         )
-        for i, task in enumerate(self._sample_tasks):
-            img, target = task
-            img = img.to(self._device)
-            # Squeeze and/or unsqueeze to ensure image is C_W_H:
-            if img.dim() == 2:
-                img = img.unsqueeze(0).unsqueeze(0)
-            elif img.dim() == 3:
-                img = img
-            pred = model(img.unsqueeze(0)).argmax().item()
-            # Normalize image to [0, 1]:
-            img = (img - img.min()) / (img.max() - img.min())
-            img = img.permute(1, 2, 0)
-            axs[0, i].imshow(img.squeeze().cpu().numpy(), cmap="grey")  # type: ignore
-            axs[0, i].set_title(f"True: {target}, Pred: {pred}")  # type: ignore
-            if target != pred:
-                axs[0, i].title.set_color("red")  # type: ignore
-        return fig
 
-    def _save_or_show(self, fig: Figure, fname: str) -> None:
-        if self._dir:
-            fig.savefig(self._dir.at(fname), bbox_inches="tight", dpi=300)
-        else:
-            plt.show()
+        def animate_diff(i, x_gen_store):
+            plots = []
+            for row in range(int(self._num_samples)):
+                for col in range(self._num_classes):
+                    axs[row, col].clear()
+                    axs[row, col].set_xticks([])
+                    axs[row, col].set_yticks([])
+                    # plots.append(axs[row, col].imshow(x_gen_store[i,(row*n_classes)+col,0],cmap='gray'))
+                    plots.append(
+                        axs[row, col].imshow(
+                            -x_gen_store[i, (row * self._num_classes) + col, 0],
+                            cmap="gray",
+                            vmin=(-x_gen_store[i]).min(),
+                            vmax=(-x_gen_store[i]).max(),
+                        )
+                    )
+            return plots
+
+        ani = FuncAnimation(
+            fig,
+            animate_diff,
+            fargs=[x_gen_store],
+            interval=200,
+            blit=False,
+            repeat=True,
+            frames=x_gen_store.shape[0],
+        )
+
+        path = self._dir.at(f"gif_ep{epoch}_w{w}.gif")
+        ani.save(
+            path,
+            dpi=100,
+            writer=PillowWriter(fps=5),
+        )
