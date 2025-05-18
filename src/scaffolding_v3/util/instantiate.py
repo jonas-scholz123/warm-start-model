@@ -102,10 +102,9 @@ def load_config(
 
     all_overrides = [f"mode={mode}", f"data={data}"] + (overrides or [])
 
-    with initialize(config_path="."):
+    with initialize(config_path="../../config"):
         cfg: Config = compose(  # type: ignore
             config_name=config_name, overrides=all_overrides
         )
-        Experiment.from_config(cfg)
 
     return cfg
