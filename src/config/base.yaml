@@ -20,7 +20,7 @@ paths:
   weights: ${runtime.root}/_weights
 
 execution:
-  epochs: 20
+  epochs: 8
   seed: 42
   start_from: LATEST
   start_weights: null
@@ -39,7 +39,8 @@ output:
    device: ${runtime.device}
    num_samples: 4
    num_classes: ${data.num_classes}
-   ws_test: [0.0, 1.0]
+   num_channels: ${data.in_channels}
+   sidelength: ${data.sidelength}
 
 rng:
   generator:
@@ -55,20 +56,34 @@ loss:
 
 model:
   _target_: cdnp.model.ddpm.DDPM
-  nn_model:
-    _target_: cdnp.model.unet.ContextUnet
-    in_channels: ${data.in_channels}
-    n_feat: 128
-    n_classes: ${data.num_classes}
-  betas: [1e-4, 0.02]
-  n_T: 400
+  noise_scheduler:
+    _target_: diffusers.DDPMScheduler
+    num_train_timesteps: 1000
+    beta_schedule: "squaredcos_cap_v2"
   device: ${runtime.device}
-  drop_prob: 0.1
+  model:
+    _target_: diffusers.UNet2DModel
+    sample_size: ${data.sidelength}
+    in_channels: ${data.in_channels}
+    out_channels: ${data.in_channels}
+    layers_per_block: 2
+    block_out_channels: [32, 64, 64]
+    down_block_types:
+      - DownBlock2D
+      - AttnDownBlock2D
+      - AttnDownBlock2D
+    up_block_types:
+      - AttnUpBlock2D
+      - AttnUpBlock2D
+      - UpBlock2D
+    num_class_embeds: ${data.num_classes}
+  loss_fn:
+    _target_: torch.nn.MSELoss
 
 optimizer:
   _target_: torch.optim.Adam
   _partial_: true
-  lr: 1e-4
+  lr: 1e-3
 
 scheduler:
   _target_: torch.optim.lr_scheduler.LinearLR
@@ -85,7 +100,7 @@ data:
   trainloader:
     _target_: torch.utils.data.DataLoader
     _partial_: true
-    batch_size: 64
+    batch_size: 128
     shuffle: true
     num_workers: 0
     multiprocessing_context: null
