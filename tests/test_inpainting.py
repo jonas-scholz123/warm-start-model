@@ -90,7 +90,7 @@ def test_getitem_return_type_and_shape(small_delegate_dataset, seeded_generator)
         gen=seeded_generator,
     )
     original_x, _ = small_delegate_dataset[0]
-    x_masked, mask = inp_dataset[0]
+    x_masked, mask, _ = inp_dataset[0]
 
     assert isinstance(x_masked, torch.Tensor), "x_masked should be a torch.Tensor"
     assert isinstance(mask, torch.Tensor), "mask should be a torch.Tensor"
@@ -114,7 +114,7 @@ def test_mask_application(small_delegate_dataset, seeded_generator):
     original_x, _ = small_delegate_dataset[
         0
     ]  # Original image has values 10.0 to 10.5 for sample 0
-    x_masked, mask = inp_dataset[0]
+    x_masked, mask, _ = inp_dataset[0]
 
     # Where mask is False (0), x_masked should be 0
     assert torch.all(x_masked[~mask] == 0.0).item(), (
@@ -135,7 +135,7 @@ def test_mask_proportion_extreme_cases(small_delegate_dataset):
         max_frac=0.0,  # frac will be 0.0
         gen=gen1,
     )
-    x_masked_all_out, mask_all_out = inp_dataset_all_masked_out[0]
+    x_masked_all_out, mask_all_out, _ = inp_dataset_all_masked_out[0]
     assert torch.all(~mask_all_out).item(), "With frac=0, mask should be all False"
     assert torch.all(x_masked_all_out == 0.0).item(), (
         "With frac=0, x_masked should be all zeros"
@@ -149,7 +149,7 @@ def test_mask_proportion_extreme_cases(small_delegate_dataset):
         gen=gen2,
     )
     original_x, _ = small_delegate_dataset[0]
-    x_masked_none_out, mask_none_out = inp_dataset_none_masked_out[0]
+    x_masked_none_out, mask_none_out, _ = inp_dataset_none_masked_out[0]
     assert torch.all(mask_none_out).item(), "With frac=1, mask should be all True"
     assert torch.all(x_masked_none_out == original_x).item(), (
         "With frac=1, x_masked should be original x"
@@ -162,13 +162,13 @@ def test_generator_reproducibility(small_delegate_dataset):
     inp_dataset1 = InpaintingDataset(
         delegate=small_delegate_dataset, min_frac=0.2, max_frac=0.7, gen=gen1_seed42
     )
-    x_masked1_idx0, mask1_idx0 = inp_dataset1[0]
+    x_masked1_idx0, mask1_idx0, _ = inp_dataset1[0]
     # Reset generator state for the second dataset to be identical
     gen2_seed42 = torch.Generator().manual_seed(42)
     inp_dataset2 = InpaintingDataset(
         delegate=small_delegate_dataset, min_frac=0.2, max_frac=0.7, gen=gen2_seed42
     )
-    x_masked2_idx0, mask2_idx0 = inp_dataset2[0]
+    x_masked2_idx0, mask2_idx0, _ = inp_dataset2[0]
 
     assert torch.equal(x_masked1_idx0, x_masked2_idx0), (
         "x_masked should be identical with same seeded generator for same index"
@@ -185,8 +185,8 @@ def test_generator_reproducibility(small_delegate_dataset):
         max_frac=0.7,
         gen=gen1_seed42_reset,
     )
-    _, _ = inp_dataset1_re[0]  # Call once to advance generator
-    x_masked1_idx1, mask1_idx1 = inp_dataset1_re[1]
+    _, _, _ = inp_dataset1_re[0]  # Call once to advance generator
+    x_masked1_idx1, mask1_idx1, _ = inp_dataset1_re[1]
 
     gen2_seed42_reset = torch.Generator().manual_seed(42)  # For inp_dataset2
     inp_dataset2_re = InpaintingDataset(
@@ -195,8 +195,8 @@ def test_generator_reproducibility(small_delegate_dataset):
         max_frac=0.7,
         gen=gen2_seed42_reset,
     )
-    _, _ = inp_dataset2_re[0]  # Call once to advance generator
-    x_masked2_idx1, mask2_idx1 = inp_dataset2_re[1]
+    _, _, _ = inp_dataset2_re[0]  # Call once to advance generator
+    x_masked2_idx1, mask2_idx1, _ = inp_dataset2_re[1]
 
     assert torch.equal(x_masked1_idx1, x_masked2_idx1), (
         "x_masked should be identical for index 1 as well"
@@ -221,7 +221,7 @@ def test_generator_non_reproducibility_different_seeds(
         max_frac=0.7,
         gen=seeded_generator,  # seed 42
     )
-    x_masked1, mask1 = inp_dataset1[0]
+    x_masked1, mask1, _ = inp_dataset1[0]
 
     inp_dataset2 = InpaintingDataset(
         delegate=small_delegate_dataset,
@@ -229,7 +229,7 @@ def test_generator_non_reproducibility_different_seeds(
         max_frac=0.7,
         gen=another_seeded_generator,  # seed 1234
     )
-    x_masked2, mask2 = inp_dataset2[0]
+    x_masked2, mask2, _ = inp_dataset2[0]
 
     # With very high probability, these will be different for non-trivial images/frac range
     assert not torch.equal(x_masked1, x_masked2), (

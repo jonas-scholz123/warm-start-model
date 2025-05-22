@@ -31,4 +31,4 @@ class InpaintingDataset(Dataset):
         mask = torch.empty_like(x).uniform_(generator=self.gen) < frac
 
         x_masked = x * mask
-        return x_masked, mask
+        return x_masked, mask, x
