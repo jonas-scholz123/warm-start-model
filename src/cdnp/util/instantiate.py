@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from hydra import compose, initialize
 from hydra.utils import instantiate
@@ -14,6 +14,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
 from cdnp.data.data import make_dataset
+from cdnp.model.ddpm import ModelInput
 from cdnp.plot.plotter import Plotter
 from config.config import Config, init_configs
 
@@ -30,6 +31,7 @@ class Experiment:
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
     plotter: Optional[Plotter]
+    preprocess_fn: Callable[[Any], ModelInput]
 
     @staticmethod
     def from_config(cfg: Config) -> "Experiment":
@@ -85,6 +87,7 @@ class Experiment:
             experiment_path=experiment_path,
             checkpoint_manager=checkpoint_manager,
             plotter=plotter,
+            preprocess_fn=exp.data.preprocess_fn,
         )
 
 

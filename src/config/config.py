@@ -47,6 +47,7 @@ class DataConfig:
     trainloader: dict
     testloader: dict
     dataset: DatasetConfig
+    preprocess_fn: dict
 
 
 class CheckpointOccasion(Enum):

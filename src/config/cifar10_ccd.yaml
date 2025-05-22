@@ -19,3 +19,8 @@ model:
   
 execution:
   epochs: 100
+
+data:
+  preprocess_fn:
+    _target_: cdnp.task.ccgen.preprocess
+    _partial_: true

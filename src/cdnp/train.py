@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import hydra
 import numpy as np
@@ -20,6 +20,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cdnp.evaluate import evaluate
+from cdnp.model.ddpm import ModelInput
 from cdnp.plot.plotter import Plotter
 from cdnp.util.instantiate import Experiment
 from config.config import (
@@ -74,6 +75,7 @@ class Trainer:
     scheduler: Optional[LRScheduler]
     plotter: Optional[Plotter]
     state: TrainerState
+    preprocess_fn: Callable[[Any], ModelInput]
 
     def __init__(
         self,
@@ -87,6 +89,7 @@ class Trainer:
         checkpoint_manager: CheckpointManager,
         scheduler: Optional[LRScheduler],
         plotter: Optional[Plotter],
+        preprocess_fn: Callable[[Any], ModelInput],
     ):
         self.cfg = cfg
         self.model = model
@@ -98,6 +101,7 @@ class Trainer:
         self.checkpoint_manager = checkpoint_manager
         self.scheduler = scheduler
         self.plotter = plotter
+        self.preprocess_fn = preprocess_fn
 
         self.state = self._load_initial_state()
 
@@ -179,6 +183,7 @@ class Trainer:
             exp.checkpoint_manager,
             exp.scheduler,
             exp.plotter,
+            exp.preprocess_fn,
         )
 
     def train_loop(self):
@@ -236,27 +241,18 @@ class Trainer:
         dry_run = self.cfg.execution.dry_run
 
         if dry_run:
-            # Make sure the tensor dimensions are correct.
-            features, target = next(iter(train_loader))
-            if features.dim() != 4:
-                raise ValueError(
-                    f"Expected a tensor of shape (batch_size, channels, height, width), \
-                    but got {features.shape}"
-                )
-            if target.dim() != 1:
-                msg = (
-                    f"Expected a target of shape (batch_size,), but got {target.shape}"
-                )
-                raise ValueError(msg)
+            _ = next(iter(train_loader))
 
         p = self.profiler
-        for features, target in p.profiled_iter("dataload", train_loader):
+        for batch in p.profiled_iter("dataload", train_loader):
+            with p.profile("preprocess"):
+                model_input: ModelInput = self.preprocess_fn(batch)
+
             with p.profile("data.to"):
-                features = features.to(device)
-                target = target.to(device)
+                model_input = model_input.to(device)
 
             with p.profile("forward"):
-                loss = self.model(features, target)
+                loss = self.model(model_input)
 
             with p.profile("backward"):
                 loss.backward()
@@ -286,6 +282,7 @@ class Trainer:
         return evaluate(
             self.model,
             self.val_loader,
+            self.preprocess_fn,
             self.cfg.execution.dry_run,
         )
 

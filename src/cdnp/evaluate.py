@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from typing import Any, Callable
 
 import hydra
 import pandas as pd
@@ -15,6 +16,7 @@ from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
 from cdnp.data.data import make_dataset
+from cdnp.model.ddpm import ModelInput
 from cdnp.util.config_filter import DryRunFilter
 from config.config import SKIP_KEYS, Config, Paths, init_configs
 
@@ -145,6 +147,7 @@ def evaluate_remaining(df: pd.DataFrame, eval_cfg: Config) -> pd.DataFrame:
 def evaluate(
     model: nn.Module,
     val_loader: DataLoader,
+    preprocess_fn: Callable[[Any], ModelInput],
     dry_run: bool = False,
 ) -> dict[str, float]:
     model.eval()
@@ -152,9 +155,10 @@ def evaluate(
     device = next(model.parameters()).device
 
     with torch.no_grad():
-        for data, target in val_loader:
-            data, target = data.to(device), target.to(device)
-            val_loss += model(data, target).item()
+        for batch in val_loader:
+            model_input = preprocess_fn(batch)
+            model_input = model_input.to(device)
+            val_loss += model(model_input).item()
 
             if dry_run:
                 break

@@ -1,6 +1,8 @@
 import torch
 from torch.utils.data import Dataset
 
+from cdnp.task.batch import ModelInput
+
 ClassificationSample = tuple[torch.Tensor, torch.Tensor]
 
 
@@ -20,7 +22,7 @@ class InpaintingDataset(Dataset):
     def __len__(self):
         return len(self.delegate)
 
-    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x, _ = self.delegate[idx]
 
         frac = torch.rand(1, generator=self.gen).item()
@@ -32,3 +34,13 @@ class InpaintingDataset(Dataset):
 
         x_masked = x * mask
         return x_masked, mask, x
+
+
+def preprocess_inpainting_batch(
+    x_masked: torch.Tensor,
+    mask: torch.Tensor,
+    x: torch.Tensor,
+) -> ModelInput:
+    # Concat along the channel dimension
+    ctx = torch.cat([x_masked, mask], dim=1)
+    return ModelInput(trg=x, image_ctx=ctx)
