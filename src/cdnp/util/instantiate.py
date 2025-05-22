@@ -25,7 +25,6 @@ class Experiment:
     val_loader: DataLoader
     test_loader: DataLoader
     optimizer: Optimizer
-    loss_fn: Module
     scheduler: Optional[LRScheduler]
     generator: Generator
     experiment_path: ExperimentPath
@@ -54,7 +53,6 @@ class Experiment:
         val_loader: DataLoader = exp.data.testloader(valset, generator=cpu_rng)
         test_loader: DataLoader = exp.data.testloader(testset, generator=cpu_rng)
 
-        loss_fn: Module = exp.loss.to(cfg.runtime.device)
         model: Module = exp.model.to(cfg.runtime.device)
         _log_num_params(model)
         optimizer = exp.optimizer(model.parameters())
@@ -82,7 +80,6 @@ class Experiment:
             val_loader=val_loader,
             test_loader=test_loader,
             optimizer=optimizer,
-            loss_fn=loss_fn,
             scheduler=scheduler,
             generator=rng,
             experiment_path=experiment_path,

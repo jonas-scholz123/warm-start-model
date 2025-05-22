@@ -1,7 +1,6 @@
 defaults:
   - base_cfg
   - _self_
-  - data: mnist
   - mode: ???
   - override hydra/hydra_logging: disabled
   - override hydra/job_logging: disabled
@@ -20,7 +19,7 @@ paths:
   weights: ${runtime.root}/_weights
 
 execution:
-  epochs: 100
+  epochs: ???
   seed: 42
   start_from: LATEST
   start_weights: null
@@ -53,9 +52,6 @@ rng:
     _target_: torch.Generator
     device: cpu
 
-loss:
-  _target_: torch.nn.NLLLoss
-
 model:
   _target_: cdnp.model.ddpm.DDPM
   noise_scheduler:
@@ -69,17 +65,6 @@ model:
     in_channels: ${data.in_channels}
     out_channels: ${data.in_channels}
     layers_per_block: 2
-    block_out_channels: [128, 256, 512, 512]
-    down_block_types:
-      - DownBlock2D
-      - AttnDownBlock2D
-      - AttnDownBlock2D
-      - AttnDownBlock2D
-    up_block_types:
-      - AttnUpBlock2D
-      - AttnUpBlock2D
-      - AttnUpBlock2D
-      - UpBlock2D
     num_class_embeds: ${data.num_classes}
     resnet_time_scale_shift: "scale_shift"
   loss_fn:

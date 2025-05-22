@@ -79,7 +79,6 @@ class Trainer:
         self,
         cfg: Config,
         model: nn.Module,
-        loss_fn: nn.Module,
         optimizer: Optimizer,
         train_loader: DataLoader,
         val_loader: DataLoader,
@@ -91,7 +90,6 @@ class Trainer:
     ):
         self.cfg = cfg
         self.model = model
-        self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -173,7 +171,6 @@ class Trainer:
         return Trainer(
             cfg,
             exp.model,
-            exp.loss_fn,
             exp.optimizer,
             exp.train_loader,
             exp.val_loader,
@@ -191,7 +188,6 @@ class Trainer:
         if self.cfg.output.use_wandb and self.cfg.output.log_gradients:
             wandb.watch(
                 self.model,
-                self.loss_fn,
                 log="all",
                 log_freq=self.cfg.output.gradient_log_freq,
             )
