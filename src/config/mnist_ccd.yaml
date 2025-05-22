@@ -16,4 +16,7 @@ model:
       - UpBlock2D
   
 execution:
-  epochs: 10
+  epochs: 20
+
+optimizer:
+  lr: 3e-3

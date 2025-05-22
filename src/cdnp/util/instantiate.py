@@ -98,9 +98,8 @@ def _log_num_params(model: Module) -> None:
 
 
 def load_config(
-    config_name: str = "base",
+    config_name: str = "mnist_ccd",
     mode: str = "dev",
-    data: str = "mnist",
     overrides: Optional[list[str]] = None,
 ) -> Config:
     """
@@ -108,7 +107,7 @@ def load_config(
     """
     init_configs()
 
-    all_overrides = [f"mode={mode}", f"data={data}"] + (overrides or [])
+    all_overrides = [f"mode={mode}"] + (overrides or [])
 
     with initialize(config_path="../../config"):
         cfg: Config = compose(  # type: ignore
