@@ -56,6 +56,7 @@ class Experiment:
 
         loss_fn: Module = exp.loss.to(cfg.runtime.device)
         model: Module = exp.model.to(cfg.runtime.device)
+        _log_num_params(model)
         optimizer = exp.optimizer(model.parameters())
 
         scheduler: Optional[LRScheduler] = (
@@ -88,6 +89,15 @@ class Experiment:
             checkpoint_manager=checkpoint_manager,
             plotter=plotter,
         )
+
+
+def _log_num_params(model: Module) -> None:
+    """
+    Log the number of parameters in the model.
+    """
+    num_params = sum(p.numel() for p in model.parameters())
+    num_params_million = num_params / 1_000_000
+    logger.info("Number of parameters: {:.2f}M", num_params_million)
 
 
 def load_config(

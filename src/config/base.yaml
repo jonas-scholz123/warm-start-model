@@ -20,7 +20,7 @@ paths:
   weights: ${runtime.root}/_weights
 
 execution:
-  epochs: 8
+  epochs: 100
   seed: 42
   start_from: LATEST
   start_weights: null
@@ -37,10 +37,12 @@ output:
    _target_: cdnp.plot.plotter.Plotter
    _partial_: true
    device: ${runtime.device}
-   num_samples: 4
+   num_samples: 2
    num_classes: ${data.num_classes}
    num_channels: ${data.in_channels}
    sidelength: ${data.sidelength}
+   norm_means: ${data.dataset.norm_means}
+   norm_stds: ${data.dataset.norm_stds}
 
 rng:
   generator:
@@ -67,23 +69,26 @@ model:
     in_channels: ${data.in_channels}
     out_channels: ${data.in_channels}
     layers_per_block: 2
-    block_out_channels: [32, 64, 64]
+    block_out_channels: [128, 256, 512, 512]
     down_block_types:
       - DownBlock2D
+      - AttnDownBlock2D
       - AttnDownBlock2D
       - AttnDownBlock2D
     up_block_types:
       - AttnUpBlock2D
       - AttnUpBlock2D
+      - AttnUpBlock2D
       - UpBlock2D
     num_class_embeds: ${data.num_classes}
+    resnet_time_scale_shift: "scale_shift"
   loss_fn:
     _target_: torch.nn.MSELoss
 
 optimizer:
-  _target_: torch.optim.Adam
+  _target_: torch.optim.AdamW
   _partial_: true
-  lr: 1e-3
+  lr: 3e-4
 
 scheduler:
   _target_: torch.optim.lr_scheduler.LinearLR
@@ -102,12 +107,15 @@ data:
     _partial_: true
     batch_size: 128
     shuffle: true
-    num_workers: 0
-    multiprocessing_context: null
+    num_workers: 8
+    prefetch_factor: 2
+    pin_memory: true
+    persistent_workers: true
   testloader:
     _target_: torch.utils.data.DataLoader
     _partial_: true
     batch_size: 1000
     shuffle: false
-    num_workers: 0
-    multiprocessing_context: null
+    num_workers: 8
+    prefetch_factor: 2
+    pin_memory: true

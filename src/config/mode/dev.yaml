@@ -4,3 +4,6 @@ execution:
   dry_run: true
 output:
   use_wandb: false
+model:
+  noise_scheduler:
+    num_train_timesteps: 10

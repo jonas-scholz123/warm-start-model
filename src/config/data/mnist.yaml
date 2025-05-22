@@ -1,6 +1,8 @@
 dataset:
   _target_: cdnp.data.mnist.MnistDataset
   _partial_: true
+  norm_means: [0.1307]
+  norm_stds: [0.3081]
 in_channels: 1
 num_classes: 10
 sidelength: 28

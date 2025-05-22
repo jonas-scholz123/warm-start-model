@@ -32,6 +32,8 @@ class Paths:
 class DatasetConfig:
     paths: Paths
     val_fraction: float
+    norm_means: tuple[float, ...]
+    norm_stds: tuple[float, ...]
     _target_: str
     _partial_: bool
 

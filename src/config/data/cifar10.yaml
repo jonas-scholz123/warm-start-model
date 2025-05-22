@@ -1,6 +1,8 @@
 dataset:
   _target_: cdnp.data.cifar10.Cifar10Dataset
   _partial_: true
+  norm_means: [0.4914, 0.4822, 0.4465]
+  norm_stds: [0.2470, 0.2435, 0.2616]
 in_channels: 3
 num_classes: 10
 sidelength: 32

@@ -1,3 +1,4 @@
+# %%
 import torch
 from mlbnb.types import Split
 from torch.utils.data import Dataset, random_split
@@ -12,14 +13,18 @@ class Cifar10Dataset(Dataset):
         paths: Paths,
         val_fraction: float,
         split: Split,
+        norm_means: tuple[float, float, float],
+        norm_stds: tuple[float, float, float],
         generator: torch.Generator,
     ):
         self.device = generator.device
         transform = transforms.Compose(
             [
+                transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 transforms.Normalize(
-                    (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)
+                    mean=norm_means,
+                    std=norm_stds,
                 ),
             ]
         )

@@ -13,9 +13,14 @@ class MnistDataset(Dataset):
         val_fraction: float,
         split: Split,
         generator: torch.Generator,
+        norm_means: tuple[float],
+        norm_stds: tuple[float],
     ):
         transform = transforms.Compose(
-            [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+            [
+                transforms.ToTensor(),
+                transforms.Normalize(mean=norm_means, std=norm_stds),
+            ]
         )
 
         if split == Split.TEST:

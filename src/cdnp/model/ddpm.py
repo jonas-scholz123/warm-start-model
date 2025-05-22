@@ -1,12 +1,12 @@
 import torch
-from diffusers import DDPMScheduler
+from diffusers import DDPMScheduler, UNet2DModel
 from torch import nn
 
 
 class DDPM(nn.Module):
     def __init__(
         self,
-        model: nn.Module,
+        model: UNet2DModel,
         loss_fn: nn.Module,
         noise_scheduler: DDPMScheduler,
         device: str,

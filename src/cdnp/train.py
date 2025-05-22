@@ -125,8 +125,7 @@ class Trainer:
                 "Pretrained model loaded from path {}, starting from pretrained.",
                 weights_path,
             )
-
-        if start_from and self.checkpoint_manager.checkpoint_exists(start_from.value):
+        elif start_from and self.checkpoint_manager.checkpoint_exists(start_from.value):
             self.checkpoint_manager.reproduce(
                 start_from.value,
                 self.model,
