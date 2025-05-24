@@ -32,16 +32,6 @@ output:
   gradient_log_freq: 100
   use_tqdm: true
   log_level: INFO
-  plotter:
-   _target_: cdnp.plot.plotter.Plotter
-   _partial_: true
-   device: ${runtime.device}
-   num_samples: 2
-   num_classes: ${data.num_classes}
-   num_channels: ${data.in_channels}
-   sidelength: ${data.sidelength}
-   norm_means: ${data.dataset.norm_means}
-   norm_stds: ${data.dataset.norm_stds}
 
 rng:
   generator:

@@ -1,6 +1,7 @@
 defaults:
   - base
   - data: mnist
+  - task: ccgen
   - _self_
 
 model:

@@ -1,41 +1,72 @@
 # %%
-from typing import Optional
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Any, Callable, Optional
 
 import torch
 from loguru import logger
-from matplotlib.figure import Figure
 from mlbnb.paths import ExperimentPath
 from torch.utils.data import Dataset
+from torch.utils.data._utils.collate import default_collate
 from torchvision.utils import make_grid, save_image
 
 from cdnp.model.ddpm import DDPM, ModelCtx
 
 
-class Plotter:
+class BasePlotter(ABC):
     def __init__(
         self,
         device: str | torch.device,
-        test_data: Dataset,
-        num_samples: int,
-        num_classes: int,
-        num_channels: int,
-        sidelength: int,
         norm_means: tuple[float, ...],
         norm_stds: tuple[float, ...],
         save_to: Optional[ExperimentPath] = None,
     ):
         self._device = device
-        self._test_data = test_data
         self._dir = save_to
-        self._num_samples = num_samples
-        self._num_classes = num_classes
-        self._num_channels = num_channels
-        self._sidelength = sidelength
         self._norm_means = torch.tensor(norm_means).to(device)[None, :, None, None]
         self._norm_stds = torch.tensor(norm_stds).to(device)[None, :, None, None]
 
+    @abstractmethod
+    def plot_prediction(self, model: DDPM, epoch: int = 0) -> None:
+        """
+        Generate and save prediction plots using the provided model.
+
+        :param model: The DDPM model to use for generating predictions.
+        :param epoch: The current epoch number, used for naming the saved plot.
+        """
+        pass
+
+    def _unnormalize(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Unnormalize the image tensor using the provided means and stds.
+        """
+        x = x * self._norm_stds + self._norm_means
+        return x.clamp(0, 1)
+
+    def _get_path(self, epoch: int, filename: str = "image") -> Path:
+        """
+        Generate a path for saving the plot image.
+        """
+        return self._dir.at(f"{filename}_ep{epoch}.png")
+
+
+class CcgenPlotter(BasePlotter):
+    def __init__(
+        self,
+        device: str | torch.device,
+        num_samples: int,
+        num_classes: int,
+        norm_means: tuple[float, ...],
+        norm_stds: tuple[float, ...],
+        test_data: Dataset,
+        save_to: Optional[ExperimentPath] = None,
+    ):
+        super().__init__(device, norm_means, norm_stds, save_to)
+        self._num_samples = num_samples
+        self._num_classes = num_classes
+
     @torch.no_grad()
-    def plot_prediction(self, model: DDPM, epoch: int = 0) -> Optional[Figure]:
+    def plot_prediction(self, model: DDPM, epoch: int = 0) -> None:
         logger.info("Making and saving prediction plots")
         class_labels = (
             torch.arange(self._num_classes)
@@ -47,19 +78,44 @@ class Plotter:
         ctx = ModelCtx(label_ctx=class_labels)
 
         total_samples = self._num_samples * self._num_classes
-        x_gen = model.sample(
-            (total_samples, self._num_channels, self._sidelength, self._sidelength),
-            ctx
-        )
+        x_gen = model.sample(total_samples, ctx)
         x_gen = self._unnormalize(x_gen)
 
         grid = make_grid(x_gen, nrow=self._num_classes)
-        path = self._dir.at(f"image_ep{epoch}.png")
-        save_image(grid, path)
+        save_image(grid, self._get_path(epoch))
 
-    def _unnormalize(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Unnormalize the image tensor using the provided means and stds.
-        """
-        x = x * self._norm_stds + self._norm_means
-        return x.clamp(0, 1)
+
+class InpaintPlotter(BasePlotter):
+    def __init__(
+        self,
+        device: str | torch.device,
+        num_samples: int,
+        norm_means: tuple[float, ...],
+        norm_stds: tuple[float, ...],
+        test_data: Dataset,
+        preprocess_fn: Callable[[Any], tuple[ModelCtx, torch.Tensor]],
+        save_to: Optional[ExperimentPath] = None,
+    ):
+        super().__init__(device, norm_means, norm_stds, save_to)
+        self._num_samples = num_samples
+        self._dataset = test_data
+        self._preprocess_fn = preprocess_fn
+
+        test_elements = []
+        for i in range(self._num_samples):
+            test_elements.append(self._dataset[i])
+        batch = default_collate(test_elements)
+        self.ctx, self.trg = self._preprocess_fn(batch)
+        self.ctx = self.ctx.to(self._device)
+        self.trg = self.trg.to(self._device)
+
+    @torch.no_grad()
+    def plot_prediction(self, model: DDPM, epoch: int = 0) -> None:
+        x_gen = model.sample(self._num_samples, self.ctx)
+        x_gen = self._unnormalize(x_gen)
+
+        # Concatenate the generated images with the original images
+        ctx_split = self.ctx.image_ctx.split(1, dim=1)
+        x_gen = torch.cat([x_gen, self.trg, *ctx_split], dim=0)
+        grid = make_grid(x_gen, nrow=self._num_samples)
+        save_image(grid, self._get_path(epoch))

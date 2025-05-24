@@ -39,12 +39,16 @@ class DDPM(nn.Module):
         self.device = device
         self.num_timesteps = noise_scheduler.config.num_train_timesteps
 
+        self.sidelength = model.sample_size
+        self.in_channels = model.config.in_channels
+        self.out_channels = model.config.out_channels
+
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
         Computes the noise prediction loss for a batch of data.
 
-        :param x: The input data (e.g., images).
-        :param ctx: The context data (e.g., class labels).
+        :x: The input data (e.g., images).
+        :ctx: The context data (e.g., class labels).
         """
         labels = ctx.label_ctx
 
@@ -64,8 +68,8 @@ class DDPM(nn.Module):
         """
         Concatenates the context data to the input tensor along the channel dimension.
 
-        :param x: Noisy input tensor.
-        :param ctx: Context data.
+        :x: Noisy input tensor.
+        :ctx: Context data.
         :return: Concatenated tensor.
         """
         if ctx.image_ctx is not None:
@@ -73,17 +77,18 @@ class DDPM(nn.Module):
         return x
 
     @torch.no_grad()
-    def sample(self, size: tuple, ctx: ModelCtx) -> torch.Tensor:
+    def sample(self, num_samples: int, ctx: ModelCtx) -> torch.Tensor:
         """
         Generates samples from the model.
 
-        :param size: Size of the generated samples, should have shape
-            (num_samples, channels, height, width).
-        :param ctx: Context labels for the generation process.
+        :num_samples: Number of samples to generate.
+        :ctx: Context labels for the generation process.
         :return: Generated samples of shape `size`.
         """
 
-        x = torch.randn(*size).to(self.device)
+        shape = (num_samples, self.out_channels, self.sidelength, self.sidelength)
+
+        x = torch.randn(*shape).to(self.device)
         labels = ctx.label_ctx
 
         for t in self.noise_scheduler.timesteps:

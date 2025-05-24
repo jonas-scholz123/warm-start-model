@@ -1,6 +1,7 @@
 defaults:
   - base
   - data: mnist
+  - task: inpaint
   - _self_
 
 model:
@@ -29,7 +30,3 @@ data:
     gen: ${rng.cpu_generator}
     min_frac: 0.1
     max_frac: 0.5
-
-# TODO
-output:
-  plotter: null

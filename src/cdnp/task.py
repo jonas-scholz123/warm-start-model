@@ -1,6 +1,12 @@
+from typing import Callable
+
 import torch
 
 from cdnp.model.ddpm import ModelCtx
+
+PreprocessFn = Callable[
+    tuple[torch.Tensor, torch.Tensor], tuple[ModelCtx, torch.Tensor]
+]
 
 
 def preprocess_ccgen(

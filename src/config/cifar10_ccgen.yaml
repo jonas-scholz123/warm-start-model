@@ -1,6 +1,7 @@
 defaults:
   - base
   - data: cifar10
+  - task: ccgen
   - _self_
 
 model:

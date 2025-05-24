@@ -1,0 +1,11 @@
+# @package _global_
+
+output:
+  plotter:
+    _target_: cdnp.plot.plotter.InpaintPlotter
+    _partial_: true
+    device: ${runtime.device}
+    num_samples: 4
+    norm_means: ${data.dataset.norm_means}
+    norm_stds: ${data.dataset.norm_stds}
+    preprocess_fn: ${data.preprocess_fn}

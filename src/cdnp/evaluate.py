@@ -1,6 +1,5 @@
 import sys
 from pathlib import Path
-from typing import Any, Callable
 
 import hydra
 import pandas as pd
@@ -16,7 +15,7 @@ from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
 from cdnp.data.data import make_dataset
-from cdnp.model.ddpm import ModelCtx
+from cdnp.task import PreprocessFn
 from cdnp.util.config_filter import DryRunFilter
 from config.config import SKIP_KEYS, Config, Paths, init_configs
 
@@ -147,8 +146,7 @@ def evaluate_remaining(df: pd.DataFrame, eval_cfg: Config) -> pd.DataFrame:
 def evaluate(
     model: nn.Module,
     val_loader: DataLoader,
-    # TODO fix this type hint
-    preprocess_fn: Callable[[Any], ModelCtx],
+    preprocess_fn: PreprocessFn,
     dry_run: bool = False,
 ) -> dict[str, float]:
     model.eval()

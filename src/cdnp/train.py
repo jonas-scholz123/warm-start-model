@@ -1,5 +1,5 @@
 import warnings
-from typing import Any, Callable, Optional
+from typing import Optional
 
 import hydra
 import numpy as np
@@ -20,8 +20,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cdnp.evaluate import evaluate
-from cdnp.model.ddpm import ModelCtx
-from cdnp.plot.plotter import Plotter
+from cdnp.plot.plotter import CcgenPlotter
+from cdnp.task import PreprocessFn
 from cdnp.util.instantiate import Experiment
 from config.config import (
     CheckpointOccasion,
@@ -73,10 +73,9 @@ class Trainer:
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
     scheduler: Optional[LRScheduler]
-    plotter: Optional[Plotter]
+    plotter: Optional[CcgenPlotter]
     state: TrainerState
-    # TODO fix type hint
-    preprocess_fn: Callable[[Any], ModelCtx]
+    preprocess_fn: PreprocessFn
 
     def __init__(
         self,
@@ -89,9 +88,8 @@ class Trainer:
         experiment_path: ExperimentPath,
         checkpoint_manager: CheckpointManager,
         scheduler: Optional[LRScheduler],
-        plotter: Optional[Plotter],
-        # TODO fix type hint
-        preprocess_fn: Callable[[Any], ModelCtx],
+        plotter: Optional[CcgenPlotter],
+        preprocess_fn: PreprocessFn,
     ):
         self.cfg = cfg
         self.model = model

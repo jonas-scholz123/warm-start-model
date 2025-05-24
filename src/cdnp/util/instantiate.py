@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 
 from cdnp.data.data import make_dataset
 from cdnp.model.ddpm import ModelCtx
-from cdnp.plot.plotter import Plotter
+from cdnp.plot.plotter import CcgenPlotter
 from config.config import Config, init_configs
 
 
@@ -30,7 +30,7 @@ class Experiment:
     generator: Generator
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
-    plotter: Optional[Plotter]
+    plotter: Optional[CcgenPlotter]
     preprocess_fn: Callable[[Any], ModelCtx]
 
     @staticmethod
@@ -68,7 +68,7 @@ class Experiment:
         logger.info("Experiment path: {}", str(experiment_path))
         checkpoint_manager = CheckpointManager(experiment_path)
 
-        plotter: Optional[Plotter] = (
+        plotter: Optional[CcgenPlotter] = (
             exp.output.plotter(test_data=valset, save_to=experiment_path)
             if exp.output.plotter
             else None
