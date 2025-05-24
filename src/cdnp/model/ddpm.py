@@ -7,14 +7,12 @@ from torch import nn
 
 
 @dataclass
-class ModelInput:
-    trg: torch.Tensor
+class ModelCtx:
     image_ctx: Optional[torch.Tensor] = None
     label_ctx: Optional[torch.Tensor] = None
 
-    def to(self, device: str, non_blocking: bool = False) -> "ModelInput":
-        return ModelInput(
-            trg=self.trg.to(device, non_blocking=non_blocking),
+    def to(self, device: str, non_blocking: bool = False) -> "ModelCtx":
+        return ModelCtx(
             image_ctx=self.image_ctx.to(device, non_blocking=non_blocking)
             if self.image_ctx is not None
             else None,
@@ -41,38 +39,41 @@ class DDPM(nn.Module):
         self.device = device
         self.num_timesteps = noise_scheduler.config.num_train_timesteps
 
-    def forward(self, batch: ModelInput) -> torch.Tensor:
+    def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
         Computes the noise prediction loss for a batch of data.
 
         :param x: The input data (e.g., images).
         :param ctx: The context data (e.g., class labels).
         """
-        x = batch.trg
-        ctx = batch.label_ctx
-        image_ctx = batch.image_ctx
+        labels = ctx.label_ctx
 
-        noise = torch.randn_like(x)
-        shape = (x.shape[0],)
+        noise = torch.randn_like(trg)
+        shape = (trg.shape[0],)
         timesteps = (
             torch.randint(0, self.num_timesteps - 1, shape).long().to(self.device)
         )
-        noisy_x = self.noise_scheduler.add_noise(x, noise, timesteps)
-        if image_ctx is not None:
-            model_input = torch.cat([noisy_x, image_ctx], dim=1)
-        else:
-            model_input = noisy_x
+        noisy_x = self.noise_scheduler.add_noise(trg, noise, timesteps)
+        model_input = self._cat_ctx(noisy_x, ctx)
 
-        pred = self.model(model_input, timesteps, class_labels=ctx).sample
+        pred = self.model(model_input, timesteps, class_labels=labels).sample
 
         return self.loss_fn(pred, noise)
 
+    def _cat_ctx(self, x: torch.Tensor, ctx: ModelCtx) -> torch.Tensor:
+        """
+        Concatenates the context data to the input tensor along the channel dimension.
+
+        :param x: Noisy input tensor.
+        :param ctx: Context data.
+        :return: Concatenated tensor.
+        """
+        if ctx.image_ctx is not None:
+            return torch.cat([x, ctx.image_ctx], dim=1)
+        return x
+
     @torch.no_grad()
-    def sample(
-        self,
-        size: tuple,
-        ctx: torch.Tensor = None,
-    ) -> torch.Tensor:
+    def sample(self, size: tuple, ctx: ModelCtx) -> torch.Tensor:
         """
         Generates samples from the model.
 
@@ -83,14 +84,11 @@ class DDPM(nn.Module):
         """
 
         x = torch.randn(*size).to(self.device)
+        labels = ctx.label_ctx
 
-        for i, t in enumerate(self.noise_scheduler.timesteps):
-            # Get model pred
-            with torch.no_grad():
-                residual = self.model(
-                    x, t, ctx
-                ).sample  # Again, note that we pass in our labels y
-
+        for t in self.noise_scheduler.timesteps:
+            model_input = self._cat_ctx(x, ctx)
+            residual = self.model(model_input, t, labels).sample
             # Update sample with step
             x = self.noise_scheduler.step(residual, t, x).prev_sample
         return x

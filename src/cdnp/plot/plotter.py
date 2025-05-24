@@ -8,7 +8,7 @@ from mlbnb.paths import ExperimentPath
 from torch.utils.data import Dataset
 from torchvision.utils import make_grid, save_image
 
-from cdnp.model.ddpm import DDPM
+from cdnp.model.ddpm import DDPM, ModelCtx
 
 
 class Plotter:
@@ -44,10 +44,12 @@ class Plotter:
             .to(self._device)
         )
 
+        ctx = ModelCtx(label_ctx=class_labels)
+
         total_samples = self._num_samples * self._num_classes
         x_gen = model.sample(
             (total_samples, self._num_channels, self._sidelength, self._sidelength),
-            class_labels,
+            ctx
         )
         x_gen = self._unnormalize(x_gen)
 

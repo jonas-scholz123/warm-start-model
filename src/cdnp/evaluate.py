@@ -16,7 +16,7 @@ from torch.utils.data.dataloader import DataLoader
 from tqdm import tqdm
 
 from cdnp.data.data import make_dataset
-from cdnp.model.ddpm import ModelInput
+from cdnp.model.ddpm import ModelCtx
 from cdnp.util.config_filter import DryRunFilter
 from config.config import SKIP_KEYS, Config, Paths, init_configs
 
@@ -147,7 +147,8 @@ def evaluate_remaining(df: pd.DataFrame, eval_cfg: Config) -> pd.DataFrame:
 def evaluate(
     model: nn.Module,
     val_loader: DataLoader,
-    preprocess_fn: Callable[[Any], ModelInput],
+    # TODO fix this type hint
+    preprocess_fn: Callable[[Any], ModelCtx],
     dry_run: bool = False,
 ) -> dict[str, float]:
     model.eval()
@@ -156,9 +157,10 @@ def evaluate(
 
     with torch.no_grad():
         for batch in val_loader:
-            model_input = preprocess_fn(batch)
-            model_input = model_input.to(device)
-            val_loss += model(model_input).item()
+            ctx, trg = preprocess_fn(batch)
+            ctx = ctx.to(device)
+            trg = trg.to(device)
+            val_loss += model(ctx, trg).item()
 
             if dry_run:
                 break

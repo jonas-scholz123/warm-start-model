@@ -14,7 +14,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
 from cdnp.data.data import make_dataset
-from cdnp.model.ddpm import ModelInput
+from cdnp.model.ddpm import ModelCtx
 from cdnp.plot.plotter import Plotter
 from config.config import Config, init_configs
 
@@ -31,7 +31,7 @@ class Experiment:
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
     plotter: Optional[Plotter]
-    preprocess_fn: Callable[[Any], ModelInput]
+    preprocess_fn: Callable[[Any], ModelCtx]
 
     @staticmethod
     def from_config(cfg: Config) -> "Experiment":
@@ -101,7 +101,7 @@ def _log_num_params(model: Module) -> None:
 
 
 def load_config(
-    config_name: str = "mnist_ccd",
+    config_name: str = "mnist_ccgen",
     mode: str = "dev",
     overrides: Optional[list[str]] = None,
 ) -> Config:

@@ -1,26 +1,24 @@
 defaults:
   - base
-  - data: cifar10
+  - data: mnist
   - _self_
 
 model:
   model:
-    block_out_channels: [128, 256, 512, 512]
+    block_out_channels: [64, 128, 256]
     down_block_types:
       - DownBlock2D
-      - AttnDownBlock2D
       - AttnDownBlock2D
       - AttnDownBlock2D
     up_block_types:
       - AttnUpBlock2D
       - AttnUpBlock2D
-      - AttnUpBlock2D
       - UpBlock2D
   
 execution:
-  epochs: 100
+  epochs: 20
 
 data:
   preprocess_fn:
-    _target_: cdnp.task.ccgen.preprocess
+    _target_: cdnp.task.preprocess_ccgen
     _partial_: true

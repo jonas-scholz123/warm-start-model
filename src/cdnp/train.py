@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cdnp.evaluate import evaluate
-from cdnp.model.ddpm import ModelInput
+from cdnp.model.ddpm import ModelCtx
 from cdnp.plot.plotter import Plotter
 from cdnp.util.instantiate import Experiment
 from config.config import (
@@ -75,7 +75,8 @@ class Trainer:
     scheduler: Optional[LRScheduler]
     plotter: Optional[Plotter]
     state: TrainerState
-    preprocess_fn: Callable[[Any], ModelInput]
+    # TODO fix type hint
+    preprocess_fn: Callable[[Any], ModelCtx]
 
     def __init__(
         self,
@@ -89,7 +90,8 @@ class Trainer:
         checkpoint_manager: CheckpointManager,
         scheduler: Optional[LRScheduler],
         plotter: Optional[Plotter],
-        preprocess_fn: Callable[[Any], ModelInput],
+        # TODO fix type hint
+        preprocess_fn: Callable[[Any], ModelCtx],
     ):
         self.cfg = cfg
         self.model = model
@@ -246,13 +248,14 @@ class Trainer:
         p = self.profiler
         for batch in p.profiled_iter("dataload", train_loader):
             with p.profile("preprocess"):
-                model_input: ModelInput = self.preprocess_fn(batch)
+                ctx, trg = self.preprocess_fn(batch)
 
             with p.profile("data.to"):
-                model_input = model_input.to(device)
+                ctx = ctx.to(device)
+                trg = trg.to(device)
 
             with p.profile("forward"):
-                loss = self.model(model_input)
+                loss = self.model(ctx, trg)
 
             with p.profile("backward"):
                 loss.backward()
