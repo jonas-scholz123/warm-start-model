@@ -20,7 +20,7 @@ def test_training_works(tmpdir: Path, config_name: str) -> None:
     init_configs()
     initialize(config_path="../../src/config", version_base=None)
 
-    cfg: Config = compose(
+    cfg: Config = compose(  # type: ignore
         config_name=config_name,
         overrides=[
             "mode=dev",
