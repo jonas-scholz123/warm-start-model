@@ -108,14 +108,23 @@ class InpaintPlotter(BasePlotter):
         self.ctx, self.trg = self._preprocess_fn(batch)
         self.ctx = self.ctx.to(self._device)
         self.trg = self.trg.to(self._device)
+        self.trg = self._unnormalize(self.trg)
 
     @torch.no_grad()
     def plot_prediction(self, model: DDPM, epoch: int = 0) -> None:
         x_gen = model.sample(self._num_samples, self.ctx)
-        x_gen = self._unnormalize(x_gen)
 
-        # Concatenate the generated images with the original images
-        ctx_split = self.ctx.image_ctx.split(1, dim=1)
-        x_gen = torch.cat([x_gen, self.trg, *ctx_split], dim=0)
+        mask = self.ctx.image_ctx[:, -1:, :, :]
+        masked_x = self.ctx.image_ctx[:, :-1, :, :]
+
+        num_channels = x_gen.shape[1]
+
+        # Ensure mask has the same number of channels as the other tensors
+        mask = mask.repeat(1, num_channels, 1, 1)
+
+        x_gen = self._unnormalize(x_gen)
+        masked_x = self._unnormalize(masked_x)
+
+        x_gen = torch.cat([x_gen, self.trg, masked_x, mask], dim=0)
         grid = make_grid(x_gen, nrow=self._num_samples)
         save_image(grid, self._get_path(epoch))

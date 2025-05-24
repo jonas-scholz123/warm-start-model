@@ -29,7 +29,8 @@ def preprocess_inpaint(
 
     # Generates an "image" of the same shape as x, with values between 0 and 1,
     # and then compares it to frac to create a mask.
-    mask = torch.empty_like(x).uniform_(generator=gen) < frac
+    single_channel_x = x[:, 0:1, :, :]
+    mask = torch.empty_like(single_channel_x).uniform_(generator=gen) < frac
     x_masked = x * mask
     # Concat along the channel dimension
     ctx = torch.cat([x_masked, mask], dim=1)

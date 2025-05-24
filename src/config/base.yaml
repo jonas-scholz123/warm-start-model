@@ -15,7 +15,7 @@ paths:
   root: ${runtime.root}
   data: ${runtime.root}/_data
   raw_data: ${runtime.root}/_data/_raw
-  output: ${runtime.root}/_output/mnist_diffusion
+  output: ${runtime.root}/_output
   weights: ${runtime.root}/_weights
 
 execution:
