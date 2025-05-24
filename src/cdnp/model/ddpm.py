@@ -37,11 +37,11 @@ class DDPM(nn.Module):
         # TODO: This should support all kinds of context data.
         # self.context_embedding = context_embedding
         self.device = device
-        self.num_timesteps = noise_scheduler.config.num_train_timesteps
+        self.num_timesteps = noise_scheduler.config.num_train_timesteps  # ty: ignore
 
-        self.sidelength = model.sample_size
-        self.in_channels = model.config.in_channels
-        self.out_channels = model.config.out_channels
+        self.sidelength = model.sample_size  # ty: ignore
+        self.in_channels = model.config.in_channels  # ty: ignore
+        self.out_channels = model.config.out_channels  # ty: ignore
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
