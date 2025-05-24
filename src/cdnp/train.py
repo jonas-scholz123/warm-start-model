@@ -20,8 +20,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cdnp.evaluate import evaluate
-from cdnp.plot.plotter import CcgenPlotter
-from cdnp.task import PreprocessFn
+from cdnp.plot.plotter import Plotter
 from cdnp.util.instantiate import Experiment
 from config.config import (
     CheckpointOccasion,
@@ -73,14 +72,14 @@ class Trainer:
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
     scheduler: Optional[LRScheduler]
-    plotter: Optional[CcgenPlotter]
+    plotter: Optional[Plotter]
     state: TrainerState
-    preprocess_fn: PreprocessFn
 
     def __init__(
         self,
         cfg: Config,
         model: nn.Module,
+        loss_fn: nn.Module,
         optimizer: Optimizer,
         train_loader: DataLoader,
         val_loader: DataLoader,
@@ -88,11 +87,11 @@ class Trainer:
         experiment_path: ExperimentPath,
         checkpoint_manager: CheckpointManager,
         scheduler: Optional[LRScheduler],
-        plotter: Optional[CcgenPlotter],
-        preprocess_fn: PreprocessFn,
+        plotter: Optional[Plotter],
     ):
         self.cfg = cfg
         self.model = model
+        self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -101,7 +100,6 @@ class Trainer:
         self.checkpoint_manager = checkpoint_manager
         self.scheduler = scheduler
         self.plotter = plotter
-        self.preprocess_fn = preprocess_fn
 
         self.state = self._load_initial_state()
 
@@ -175,6 +173,7 @@ class Trainer:
         return Trainer(
             cfg,
             exp.model,
+            exp.loss_fn,
             exp.optimizer,
             exp.train_loader,
             exp.val_loader,
@@ -183,7 +182,6 @@ class Trainer:
             exp.checkpoint_manager,
             exp.scheduler,
             exp.plotter,
-            exp.preprocess_fn,
         )
 
     def train_loop(self):
@@ -193,6 +191,7 @@ class Trainer:
         if self.cfg.output.use_wandb and self.cfg.output.log_gradients:
             wandb.watch(
                 self.model,
+                self.loss_fn,
                 log="all",
                 log_freq=self.cfg.output.gradient_log_freq,
             )
@@ -241,19 +240,27 @@ class Trainer:
         dry_run = self.cfg.execution.dry_run
 
         if dry_run:
-            _ = next(iter(train_loader))
+            # Make sure the tensor dimensions are correct.
+            features, target = next(iter(train_loader))
+            if features.dim() != 4:
+                raise ValueError(
+                    f"Expected a tensor of shape (batch_size, channels, height, width), \
+                    but got {features.shape}"
+                )
+            if target.dim() != 1:
+                msg = (
+                    f"Expected a target of shape (batch_size,), but got {target.shape}"
+                )
+                raise ValueError(msg)
 
         p = self.profiler
-        for batch in p.profiled_iter("dataload", train_loader):
-            with p.profile("preprocess"):
-                ctx, trg = self.preprocess_fn(batch)
-
+        for features, target in p.profiled_iter("dataload", train_loader):
             with p.profile("data.to"):
-                ctx = ctx.to(device)
-                trg = trg.to(device)
+                features = features.to(device)
+                target = target.to(device)
 
             with p.profile("forward"):
-                loss = self.model(ctx, trg)
+                loss = self.model(features, target)
 
             with p.profile("backward"):
                 loss.backward()
@@ -283,7 +290,6 @@ class Trainer:
         return evaluate(
             self.model,
             self.val_loader,
-            self.preprocess_fn,
             self.cfg.execution.dry_run,
         )
 

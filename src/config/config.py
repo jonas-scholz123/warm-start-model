@@ -47,7 +47,6 @@ class DataConfig:
     trainloader: dict
     testloader: dict
     dataset: DatasetConfig
-    preprocess_fn: dict
 
 
 class CheckpointOccasion(Enum):
@@ -95,6 +94,7 @@ class Config:
     data: DataConfig = MISSING
     rng: RngConfig = MISSING
     model: dict = MISSING
+    loss: dict = MISSING
     optimizer: dict = MISSING
     output: OutputConfig = MISSING
     scheduler: dict = MISSING
