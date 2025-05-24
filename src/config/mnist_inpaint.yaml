@@ -1,0 +1,26 @@
+defaults:
+  - base
+  - data: mnist
+  - task: inpaint
+  - _self_
+
+model:
+  model:
+    block_out_channels: [64, 128, 256]
+    down_block_types:
+      - DownBlock2D
+      - AttnDownBlock2D
+      - AttnDownBlock2D
+    up_block_types:
+      - AttnUpBlock2D
+      - AttnUpBlock2D
+      - UpBlock2D
+    out_channels: 1 # Just the greyscale image
+    num_class_embeds: null # No class labels for this task
+  
+execution:
+  epochs: 20
+
+data:
+  in_channels: 3 # noised greyscale image + masked input + mask
+ 

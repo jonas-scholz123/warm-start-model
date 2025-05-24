@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from hydra import compose, initialize
 from hydra.utils import instantiate
@@ -14,7 +14,8 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
 from cdnp.data.data import make_dataset
-from cdnp.plot.plotter import Plotter
+from cdnp.model.ddpm import ModelCtx
+from cdnp.plot.plotter import CcgenPlotter
 from config.config import Config, init_configs
 
 
@@ -25,12 +26,12 @@ class Experiment:
     val_loader: DataLoader
     test_loader: DataLoader
     optimizer: Optimizer
-    loss_fn: Module
     scheduler: Optional[LRScheduler]
     generator: Generator
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
-    plotter: Optional[Plotter]
+    plotter: Optional[CcgenPlotter]
+    preprocess_fn: Callable[[Any], ModelCtx]
 
     @staticmethod
     def from_config(cfg: Config) -> "Experiment":
@@ -54,7 +55,6 @@ class Experiment:
         val_loader: DataLoader = exp.data.testloader(valset, generator=cpu_rng)
         test_loader: DataLoader = exp.data.testloader(testset, generator=cpu_rng)
 
-        loss_fn: Module = exp.loss.to(cfg.runtime.device)
         model: Module = exp.model.to(cfg.runtime.device)
         _log_num_params(model)
         optimizer = exp.optimizer(model.parameters())
@@ -68,7 +68,7 @@ class Experiment:
         logger.info("Experiment path: {}", str(experiment_path))
         checkpoint_manager = CheckpointManager(experiment_path)
 
-        plotter: Optional[Plotter] = (
+        plotter: Optional[CcgenPlotter] = (
             exp.output.plotter(test_data=valset, save_to=experiment_path)
             if exp.output.plotter
             else None
@@ -82,12 +82,12 @@ class Experiment:
             val_loader=val_loader,
             test_loader=test_loader,
             optimizer=optimizer,
-            loss_fn=loss_fn,
             scheduler=scheduler,
             generator=rng,
             experiment_path=experiment_path,
             checkpoint_manager=checkpoint_manager,
             plotter=plotter,
+            preprocess_fn=exp.data.preprocess_fn,
         )
 
 
@@ -101,9 +101,8 @@ def _log_num_params(model: Module) -> None:
 
 
 def load_config(
-    config_name: str = "base",
+    config_name: str = "mnist_ccgen",
     mode: str = "dev",
-    data: str = "mnist",
     overrides: Optional[list[str]] = None,
 ) -> Config:
     """
@@ -111,7 +110,7 @@ def load_config(
     """
     init_configs()
 
-    all_overrides = [f"mode={mode}", f"data={data}"] + (overrides or [])
+    all_overrides = [f"mode={mode}"] + (overrides or [])
 
     with initialize(config_path="../../config"):
         cfg: Config = compose(  # type: ignore

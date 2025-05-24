@@ -1,0 +1,21 @@
+# @package _global_
+
+output:
+  plotter:
+    _target_: cdnp.plot.plotter.InpaintPlotter
+    _partial_: true
+    device: ${runtime.device}
+    num_samples: 4
+    norm_means: ${data.dataset.norm_means}
+    norm_stds: ${data.dataset.norm_stds}
+    preprocess_fn: ${data.preprocess_fn}
+
+
+data:
+  preprocess_fn:
+    _target_: cdnp.task.preprocess_inpaint
+    _partial_: true
+    # TODO: this should be a singleton, injected in Experiment.from_config
+    gen: ${rng.cpu_generator}
+    min_frac: 0.1
+    max_frac: 0.5
