@@ -1,0 +1,17 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: inpaint
+  - model: cnp
+  - model/backbone: big
+  - _self_
+
+data:
+  in_channels: 4 # masked RGB input + mask
+
+model:
+  backbone:
+    out_channels: 6 # Predicted RGB mean + predicted RGB stddev
+
+execution:
+  epochs: 40

@@ -9,3 +9,7 @@ output:
     num_classes: ${data.num_classes}
     norm_means: ${data.dataset.norm_means}
     norm_stds: ${data.dataset.norm_stds}
+  
+model:
+  backbone:
+    num_class_embeds: ${data.num_classes}
