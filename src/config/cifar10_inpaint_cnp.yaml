@@ -14,4 +14,4 @@ model:
     out_channels: 6 # Predicted RGB mean + predicted RGB stddev
 
 execution:
-  epochs: 40
+  epochs: 20
