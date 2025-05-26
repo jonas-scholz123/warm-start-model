@@ -1,0 +1,17 @@
+defaults:
+  - base
+  - data: celeba
+  - task: inpaint
+  - model: ddpm
+  - model/backbone: big
+  - _self_
+
+model:
+  backbone:
+    out_channels: 3 # RGB image
+  
+execution:
+  epochs: 30
+
+data:
+  in_channels: 7 # noised RGB image + masked RGB input + mask

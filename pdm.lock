@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:9f3491e1e6128007a6b8313b82dbb777023a11ba045b04ad9d6e6d0600e80800"
+content_hash = "sha256:adb09a40a7e8ce32ef70248def2f24df4bc53b99bd2ced13950ff141d78c8611"
 
 [[metadata.targets]]
 requires_python = ">=3.11.0"
@@ -498,6 +498,21 @@ summary = ""
 files = [
     {file = "fsspec-2025.3.2-py3-none-any.whl", hash = "sha256:2daf8dc3d1dfa65b6aa37748d112773a7a08416f6c70d96b264c96476ecaf711"},
     {file = "fsspec-2025.3.2.tar.gz", hash = "sha256:e52c77ef398680bbd6a98c0e628fbc469491282981209907bbc8aea76a04fdc6"},
+]
+
+[[package]]
+name = "gdown"
+version = "5.2.0"
+summary = ""
+dependencies = [
+    "beautifulsoup4",
+    "filelock",
+    "requests",
+    "tqdm",
+]
+files = [
+    {file = "gdown-5.2.0-py3-none-any.whl", hash = "sha256:33083832d82b1101bdd0e9df3edd0fbc0e1c5f14c9d8c38d2a35bf1683b526d6"},
+    {file = "gdown-5.2.0.tar.gz", hash = "sha256:2145165062d85520a3cd98b356c9ed522c5e7984d408535409fd46f94defc787"},
 ]
 
 [[package]]
@@ -1673,6 +1688,15 @@ files = [
 ]
 
 [[package]]
+name = "pysocks"
+version = "1.7.1"
+summary = ""
+files = [
+    {file = "PySocks-1.7.1-py3-none-any.whl", hash = "sha256:2725bd0a9925919b9b51739eea5f9e2bae91e83288108a9ad338b2e3a4435ee5"},
+    {file = "PySocks-1.7.1.tar.gz", hash = "sha256:3f8804571ebe159c380ac6de37643bb4685970655d3bba243530d6558b799aa0"},
+]
+
+[[package]]
 name = "pytest"
 version = "8.3.5"
 summary = ""
@@ -1887,6 +1911,20 @@ dependencies = [
     "charset-normalizer",
     "idna",
     "urllib3",
+]
+files = [
+    {file = "requests-2.32.3-py3-none-any.whl", hash = "sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6"},
+    {file = "requests-2.32.3.tar.gz", hash = "sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760"},
+]
+
+[[package]]
+name = "requests"
+version = "2.32.3"
+extras = ["socks"]
+summary = ""
+dependencies = [
+    "pysocks",
+    "requests==2.32.3",
 ]
 files = [
     {file = "requests-2.32.3-py3-none-any.whl", hash = "sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6"},
