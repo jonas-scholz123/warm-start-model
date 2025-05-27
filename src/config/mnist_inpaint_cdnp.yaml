@@ -1,0 +1,20 @@
+defaults:
+  - base
+  - data: mnist
+  - task: inpaint
+  - model: cdnp
+  - model/backbone: small
+  - _self_
+
+model:
+  cnp:
+    backbone:
+      in_channels: 2 # masked input + mask
+      out_channels: 2 # Mean + Std
+  backbone:
+    in_channels: 3 # noised greyscale image + masked input + mask
+    out_channels: 1 # Just the greyscale image
+  
+execution:
+  epochs: 20
+ 

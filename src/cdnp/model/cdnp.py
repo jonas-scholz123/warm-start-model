@@ -2,15 +2,17 @@ import torch
 from diffusers import DDPMScheduler, UNet2DModel
 from torch import nn
 
+from cdnp.model.cnp import CNP
 from cdnp.model.ctx import ModelCtx
 
 
-class DDPM(nn.Module):
+class CDNP(nn.Module):
     def __init__(
         self,
         backbone: UNet2DModel,
         loss_fn: nn.Module,
         noise_scheduler: DDPMScheduler,
+        cnp: CNP,
         device: str,
     ):
         super().__init__()
@@ -21,10 +23,7 @@ class DDPM(nn.Module):
         # self.context_embedding = context_embedding
         self.device = device
         self.num_timesteps = noise_scheduler.config.num_train_timesteps  # ty: ignore
-
-        self.sidelength = backbone.sample_size  # ty: ignore
-        self.in_channels = backbone.config.in_channels  # ty: ignore
-        self.out_channels = backbone.config.out_channels  # ty: ignore
+        self.cnp = cnp
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
@@ -32,7 +31,11 @@ class DDPM(nn.Module):
         """
         labels = ctx.label_ctx
 
-        noise = torch.randn_like(trg)
+        cnp_sample = self.cnp.sample_with_grad(ctx)
+
+        noise = cnp_sample - trg
+
+        # TODO Refactor to use DDPM class
         shape = (trg.shape[0],)
         timesteps = (
             torch.randint(0, self.num_timesteps - 1, shape).long().to(self.device)
@@ -66,9 +69,9 @@ class DDPM(nn.Module):
         :return: Generated samples of shape `size`.
         """
 
-        shape = (num_samples, self.out_channels, self.sidelength, self.sidelength)
+        # TODO: num samples: extend along batch dimension
 
-        x = torch.randn(*shape).to(self.device)
+        x = self.cnp.sample(ctx)
         labels = ctx.label_ctx
 
         for t in self.noise_scheduler.timesteps:

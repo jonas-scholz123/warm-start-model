@@ -1,6 +1,7 @@
 # @package _global_
 
 model:
+  # TODO: backbone here is too restrictive
   backbone:
     block_out_channels: [128, 256, 512, 512]
     down_block_types:

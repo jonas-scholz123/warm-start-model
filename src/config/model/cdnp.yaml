@@ -1,0 +1,21 @@
+_target_: cdnp.model.cdnp.CDNP
+noise_scheduler:
+  _target_: diffusers.DDPMScheduler
+  num_train_timesteps: 10
+  beta_schedule: "squaredcos_cap_v2"
+loss_fn:
+  _target_: torch.nn.MSELoss
+cnp:
+  _target_: cdnp.model.cnp.CNP
+  device: ${runtime.device}
+  backbone:
+    _target_: diffusers.UNet2DModel
+    block_out_channels: [64, 128, 256]
+    down_block_types:
+      - DownBlock2D
+      - AttnDownBlock2D
+      - AttnDownBlock2D
+    up_block_types:
+      - AttnUpBlock2D
+      - AttnUpBlock2D
+      - UpBlock2D

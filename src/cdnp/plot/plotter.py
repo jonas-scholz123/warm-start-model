@@ -10,6 +10,8 @@ from torch.utils.data import Dataset
 from torch.utils.data._utils.collate import default_collate
 from torchvision.utils import make_grid, save_image
 
+from cdnp.model.cdnp import CDNP
+from cdnp.model.cnp import CNP
 from cdnp.model.ddpm import DDPM, ModelCtx
 
 
@@ -78,7 +80,7 @@ class CcgenPlotter(BasePlotter):
         ctx = ModelCtx(label_ctx=class_labels)
 
         total_samples = self._num_samples * self._num_classes
-        x_gen = model.sample(total_samples, ctx)
+        x_gen = model.sample(ctx, total_samples)
         x_gen = self._unnormalize(x_gen)
 
         grid = make_grid(x_gen, nrow=self._num_classes)
@@ -111,8 +113,8 @@ class InpaintPlotter(BasePlotter):
         self.trg = self._unnormalize(self.trg)
 
     @torch.no_grad()
-    def plot_prediction(self, model: DDPM, epoch: int = 0) -> None:
-        x_gen = model.sample(self._num_samples, self.ctx)
+    def plot_prediction(self, model: DDPM | CNP | CDNP, epoch: int = 0) -> None:
+        x_gen = model.sample(self.ctx, self._num_samples)
 
         mask = self.ctx.image_ctx[:, -1:, :, :]
         masked_x = self.ctx.image_ctx[:, :-1, :, :]

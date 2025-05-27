@@ -1,0 +1,20 @@
+defaults:
+  - base
+  - data: celeba
+  - task: inpaint
+  - model: cdnp
+  - model/backbone: big
+  - _self_
+
+model:
+  cnp:
+    backbone:
+      in_channels: 4 # masked RGB input + mask
+      out_channels: 6 # Mean + Std for each RGB channel
+  backbone:
+    in_channels: 7 # noised RGB image + masked RGB input + mask
+    out_channels: 3 # RGB image
+  
+execution:
+  epochs: 20
+ 

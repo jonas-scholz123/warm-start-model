@@ -60,6 +60,7 @@ class ExecutionConfig:
     dry_run: bool
     epochs: int
     seed: int
+    gradient_clip_norm: float
     start_from: Optional[CheckpointOccasion]
     start_weights: Optional[str]
 
