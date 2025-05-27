@@ -15,3 +15,6 @@ execution:
 
 data:
   in_channels: 4 # masked RGB input + mask
+  preprocess_fn:
+    min_frac: 0.05
+    max_frac: 0.3
