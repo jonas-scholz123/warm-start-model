@@ -1,0 +1,8 @@
+dataset:
+  _target_: cdnp.data.celeba.CelebADataset
+  _partial_: true
+  norm_means: [0.5, 0.5, 0.5]
+  norm_stds: [0.5, 0.5, 0.5]
+in_channels: 3
+num_classes: null
+sidelength: 64

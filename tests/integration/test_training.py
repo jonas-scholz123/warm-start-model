@@ -11,7 +11,13 @@ from config.config import Config, init_configs
 
 
 @pytest.mark.parametrize(
-    "config_name", ["cifar10_ccgen", "mnist_ccgen", "mnist_inpaint"]
+    "config_name",
+    [
+        "cifar10_ccgen",
+        "mnist_ccgen",
+        "mnist_inpaint",
+        "cifar10_inpaint",
+    ],
 )
 def test_training_works(tmpdir: Path, config_name: str) -> None:
     """Checks that the config initializes as expected."""

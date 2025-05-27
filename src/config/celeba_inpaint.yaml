@@ -1,6 +1,6 @@
 defaults:
   - base
-  - data: cifar10
+  - data: celeba
   - task: inpaint
   - model: ddpm
   - model/backbone: big
@@ -11,7 +11,10 @@ model:
     out_channels: 3 # RGB image
   
 execution:
-  epochs: 100
+  epochs: 30
 
 data:
   in_channels: 7 # noised RGB image + masked RGB input + mask
+  preprocess_fn:
+    min_frac: 0.05
+    max_frac: 0.3

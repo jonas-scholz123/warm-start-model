@@ -1,0 +1,7 @@
+_target_: cdnp.model.ddpm.DDPM
+noise_scheduler:
+  _target_: diffusers.DDPMScheduler
+  num_train_timesteps: 1000
+  beta_schedule: "squaredcos_cap_v2"
+loss_fn:
+  _target_: torch.nn.MSELoss

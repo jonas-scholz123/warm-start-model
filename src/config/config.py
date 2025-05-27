@@ -42,7 +42,7 @@ class DatasetConfig:
 class DataConfig:
     cache: bool
     in_channels: int
-    num_classes: int
+    num_classes: Optional[int]
     sidelength: int
     trainloader: dict
     testloader: dict

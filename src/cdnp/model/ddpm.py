@@ -1,37 +1,20 @@
-from dataclasses import dataclass
-from typing import Optional
-
 import torch
 from diffusers import DDPMScheduler, UNet2DModel
 from torch import nn
 
-
-@dataclass
-class ModelCtx:
-    image_ctx: Optional[torch.Tensor] = None
-    label_ctx: Optional[torch.Tensor] = None
-
-    def to(self, device: str, non_blocking: bool = False) -> "ModelCtx":
-        return ModelCtx(
-            image_ctx=self.image_ctx.to(device, non_blocking=non_blocking)
-            if self.image_ctx is not None
-            else None,
-            label_ctx=self.label_ctx.to(device, non_blocking=non_blocking)
-            if self.label_ctx is not None
-            else None,
-        )
+from cdnp.model.ctx import ModelCtx
 
 
 class DDPM(nn.Module):
     def __init__(
         self,
-        model: UNet2DModel,
+        backbone: UNet2DModel,
         loss_fn: nn.Module,
         noise_scheduler: DDPMScheduler,
         device: str,
     ):
-        super(DDPM, self).__init__()
-        self.model = model
+        super().__init__()
+        self.backbone = backbone
         self.loss_fn = loss_fn
         self.noise_scheduler = noise_scheduler
         # TODO: This should support all kinds of context data.
@@ -39,9 +22,9 @@ class DDPM(nn.Module):
         self.device = device
         self.num_timesteps = noise_scheduler.config.num_train_timesteps  # ty: ignore
 
-        self.sidelength = model.sample_size  # ty: ignore
-        self.in_channels = model.config.in_channels  # ty: ignore
-        self.out_channels = model.config.out_channels  # ty: ignore
+        self.sidelength = backbone.sample_size  # ty: ignore
+        self.in_channels = backbone.config.in_channels  # ty: ignore
+        self.out_channels = backbone.config.out_channels  # ty: ignore
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
@@ -60,7 +43,7 @@ class DDPM(nn.Module):
         noisy_x = self.noise_scheduler.add_noise(trg, noise, timesteps)
         model_input = self._cat_ctx(noisy_x, ctx)
 
-        pred = self.model(model_input, timesteps, class_labels=labels).sample
+        pred = self.backbone(model_input, timesteps, class_labels=labels).sample
 
         return self.loss_fn(pred, noise)
 
@@ -93,7 +76,7 @@ class DDPM(nn.Module):
 
         for t in self.noise_scheduler.timesteps:
             model_input = self._cat_ctx(x, ctx)
-            residual = self.model(model_input, t, labels).sample
+            residual = self.backbone(model_input, t, labels).sample
             # Update sample with step
             x = self.noise_scheduler.step(residual, t, x).prev_sample
         return x

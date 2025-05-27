@@ -43,22 +43,14 @@ rng:
     device: cpu
 
 model:
-  _target_: cdnp.model.ddpm.DDPM
-  noise_scheduler:
-    _target_: diffusers.DDPMScheduler
-    num_train_timesteps: 1000
-    beta_schedule: "squaredcos_cap_v2"
   device: ${runtime.device}
-  model:
+  backbone:
     _target_: diffusers.UNet2DModel
     sample_size: ${data.sidelength}
     in_channels: ${data.in_channels}
     out_channels: ${data.in_channels}
     layers_per_block: 2
-    num_class_embeds: ${data.num_classes}
     resnet_time_scale_shift: "scale_shift"
-  loss_fn:
-    _target_: torch.nn.MSELoss
 
 optimizer:
   _target_: torch.optim.AdamW
@@ -80,7 +72,7 @@ data:
   trainloader:
     _target_: torch.utils.data.DataLoader
     _partial_: true
-    batch_size: 128
+    batch_size: 32
     shuffle: true
     num_workers: 8
     prefetch_factor: 2
@@ -89,7 +81,7 @@ data:
   testloader:
     _target_: torch.utils.data.DataLoader
     _partial_: true
-    batch_size: 1000
+    batch_size: 32
     shuffle: false
     num_workers: 8
     prefetch_factor: 2

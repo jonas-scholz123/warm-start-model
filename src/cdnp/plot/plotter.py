@@ -120,11 +120,11 @@ class InpaintPlotter(BasePlotter):
         num_channels = x_gen.shape[1]
 
         # Ensure mask has the same number of channels as the other tensors
-        mask = mask.repeat(1, num_channels, 1, 1)
+        mask = mask.expand(-1, num_channels, -1, -1)
 
         x_gen = self._unnormalize(x_gen)
         masked_x = self._unnormalize(masked_x)
 
-        x_gen = torch.cat([x_gen, self.trg, masked_x, mask], dim=0)
+        x_gen = torch.cat([self.trg, mask, masked_x, x_gen], dim=0)
         grid = make_grid(x_gen, nrow=self._num_samples)
         save_image(grid, self._get_path(epoch))
