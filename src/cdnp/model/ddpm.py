@@ -77,3 +77,6 @@ class DDPM(nn.Module):
             # Update sample with step
             x = self.noise_scheduler.step(residual, t, x).prev_sample
         return x
+
+    def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:
+        return [self.sample(ctx, 4)]

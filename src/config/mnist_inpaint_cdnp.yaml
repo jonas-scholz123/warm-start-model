@@ -8,13 +8,13 @@ defaults:
 
 model:
   cnp:
-    backbone:
-      in_channels: 2 # masked input + mask
-      out_channels: 2 # Mean + Std
+    _target_: cdnp.util.instantiate.load_model_from_path
+    path: ${paths.weights}/2025-05-28_10-29_kind_hippo
+    freeze: true # Freeze the trained CNP
   backbone:
     in_channels: 3 # noised greyscale image + masked input + mask
     out_channels: 1 # Just the greyscale image
-  
+ 
 execution:
   epochs: 20
  

@@ -202,7 +202,7 @@ class Trainer:
         logger.info("Starting training")
 
         if self.plotter:
-            self.plotter.plot_prediction(self.model)
+            self.plotter.plot_prediction(self.model, s.epoch)
 
         while s.epoch <= self.cfg.execution.epochs:
             logger.info("Starting epoch {} / {}", s.epoch, self.cfg.execution.epochs)

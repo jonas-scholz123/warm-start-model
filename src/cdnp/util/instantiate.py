@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 from hydra import compose, initialize
@@ -63,7 +64,7 @@ class Experiment:
             exp.scheduler(optimizer) if exp.scheduler else None
         )
 
-        experiment_path = ExperimentPath.from_config(cfg, cfg.paths.output)
+        experiment_path = ExperimentPath.from_config(cfg, Path(cfg.paths.output))
 
         logger.info("Experiment path: {}", str(experiment_path))
         checkpoint_manager = CheckpointManager(experiment_path)
@@ -104,6 +105,7 @@ def load_config(
     config_name: str = "mnist_ccgen",
     mode: str = "dev",
     overrides: Optional[list[str]] = None,
+    config_path: str = "../../config",
 ) -> Config:
     """
     Load the configuration from the given config name and path.
@@ -112,9 +114,31 @@ def load_config(
 
     all_overrides = [f"mode={mode}"] + (overrides or [])
 
-    with initialize(config_path="../../config"):
+    with initialize(config_path=config_path):
         cfg: Config = compose(  # type: ignore
             config_name=config_name, overrides=all_overrides
         )
 
     return cfg
+
+
+def load_model_from_path(
+    path: Path | ExperimentPath | str, checkpoint: str = "latest", freeze: bool = False
+) -> Module:
+    if isinstance(path, str):
+        path = Path(path)
+    if isinstance(path, Path):
+        path = ExperimentPath.from_path(path)
+
+    cfg: Config = path.get_config()
+    exp: Experiment = Experiment.from_config(cfg)
+
+    cm = CheckpointManager(path)
+    _ = cm.reproduce_model(exp.model, checkpoint)
+
+    if freeze:
+        for param in exp.model.parameters():
+            param.requires_grad = False
+        logger.info("Loaded model parameters are frozen.")
+
+    return exp.model

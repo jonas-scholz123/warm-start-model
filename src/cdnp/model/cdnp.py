@@ -1,9 +1,10 @@
 import torch
-from diffusers import DDPMScheduler, UNet2DModel
+from diffusers import UNet2DModel
 from torch import nn
 
 from cdnp.model.cnp import CNP
 from cdnp.model.ctx import ModelCtx
+from cdnp.model.noise_scheduler import CDNPScheduler
 
 
 class CDNP(nn.Module):
@@ -11,9 +12,10 @@ class CDNP(nn.Module):
         self,
         backbone: UNet2DModel,
         loss_fn: nn.Module,
-        noise_scheduler: DDPMScheduler,
+        noise_scheduler: CDNPScheduler,
         cnp: CNP,
         device: str,
+        # TODO: take a torch.Generator
     ):
         super().__init__()
         self.backbone = backbone
@@ -31,21 +33,23 @@ class CDNP(nn.Module):
         """
         labels = ctx.label_ctx
 
-        cnp_sample = self.cnp.sample_with_grad(ctx)
+        prd_dist = self.cnp.predict(ctx)
 
-        noise = cnp_sample - trg
-
-        # TODO Refactor to use DDPM class
         shape = (trg.shape[0],)
         timesteps = (
             torch.randint(0, self.num_timesteps - 1, shape).long().to(self.device)
         )
-        noisy_x = self.noise_scheduler.add_noise(trg, noise, timesteps)
+
+        noise = torch.randn_like(trg, device=self.device)
+        noisy_x = self.noise_scheduler.add_noise(
+            trg, noise, timesteps, x_T_mean=prd_dist.mean, x_T_std=prd_dist.stddev
+        )
+
         model_input = self._cat_ctx(noisy_x, ctx)
 
-        pred = self.backbone(model_input, timesteps, class_labels=labels).sample
+        pred_noise = self.backbone(model_input, timesteps, class_labels=labels).sample
 
-        return self.loss_fn(pred, noise)
+        return self.loss_fn(pred_noise, noise)
 
     def _cat_ctx(self, x: torch.Tensor, ctx: ModelCtx) -> torch.Tensor:
         """
@@ -60,7 +64,7 @@ class CDNP(nn.Module):
         return x
 
     @torch.no_grad()
-    def sample(self, ctx: ModelCtx, num_samples: int) -> torch.Tensor:
+    def sample(self, ctx: ModelCtx, num_samples: int = 0) -> torch.Tensor:
         """
         Generates samples from the model.
 
@@ -71,12 +75,40 @@ class CDNP(nn.Module):
 
         # TODO: num samples: extend along batch dimension
 
-        x = self.cnp.sample(ctx)
+        prd_dist = self.cnp.predict(ctx)
         labels = ctx.label_ctx
 
+        x_t = prd_dist.sample()
+
         for t in self.noise_scheduler.timesteps:
-            model_input = self._cat_ctx(x, ctx)
-            residual = self.backbone(model_input, t, labels).sample
+            model_input = self._cat_ctx(x_t, ctx)
+            prd_eps = self.backbone(model_input, t, labels).sample
             # Update sample with step
-            x = self.noise_scheduler.step(residual, t, x).prev_sample
-        return x
+
+            x_t = self.noise_scheduler.step(
+                prd_eps, t, x_t, x_T_mean=prd_dist.mean, x_T_std=prd_dist.stddev
+            ).prev_sample
+        return x_t
+
+    @torch.no_grad()
+    def make_plot(self, ctx: ModelCtx, num_samples: int = 0) -> list[torch.Tensor]:
+        cnp_dist = self.cnp.predict(ctx)
+        mean = cnp_dist.mean
+        std = cnp_dist.stddev
+        plots = [mean, std]
+        plots.append(torch.zeros_like(mean))
+        plots.append(torch.ones_like(mean))
+
+        x = cnp_dist.sample()
+
+        for t in self.noise_scheduler.timesteps:
+            plots.append(x)
+            model_input = self._cat_ctx(x, ctx)
+            prd_noise = self.backbone(model_input, t, ctx.label_ctx).sample
+
+            out = self.noise_scheduler.step(prd_noise, t, x, x_T_mean=mean, x_T_std=std)
+
+            x = out.prev_sample
+        plots.append(x)
+
+        return plots

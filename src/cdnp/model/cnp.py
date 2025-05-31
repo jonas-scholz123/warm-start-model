@@ -66,3 +66,7 @@ class CNP(nn.Module):
     def sample_with_grad(self, ctx: ModelCtx) -> torch.Tensor:
         prd_dist = self.predict(ctx)
         return prd_dist.sample()
+
+    def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:
+        pred = self.predict(ctx)
+        return [pred.mean, pred.stddev, pred.sample()]
