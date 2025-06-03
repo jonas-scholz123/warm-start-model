@@ -11,10 +11,12 @@ class CNP(nn.Module):
         self,
         backbone: UNet2DModel,
         device: str,
+        min_std: float = 1e-6,
     ):
         super().__init__()
         self.backbone = backbone
         self.device = device
+        self.min_std = min_std
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
@@ -41,21 +43,30 @@ class CNP(nn.Module):
 
         mean, std = pred.chunk(2, dim=1)
         std = nn.functional.softplus(std)
+        std = torch.clamp(std, min=self.min_std)
         return Normal(mean, std)
 
     def nll(self, prd_dist: Normal, trg: torch.Tensor) -> torch.Tensor:
         return -prd_dist.log_prob(trg).mean()
 
     @torch.no_grad()
-    def sample(self, num_samples: int, ctx: ModelCtx) -> torch.Tensor:
+    def sample(self, ctx: ModelCtx, num_samples: int = 0) -> torch.Tensor:
         """
         Generates samples from the model.
 
-        :num_samples: (ignored)
         :ctx: Context labels for the generation process. Shape:
             (num_samples, in_channels, sidelength, sidelength)
+        :num_samples: (ignored)
         :return: Generated samples of shape
             (num_samples, out_channels, sidelength, sidelength).
         """
         prd_dist = self.predict(ctx)
         return prd_dist.sample()
+
+    def sample_with_grad(self, ctx: ModelCtx) -> torch.Tensor:
+        prd_dist = self.predict(ctx)
+        return prd_dist.sample()
+
+    def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:
+        pred = self.predict(ctx)
+        return [pred.mean, pred.stddev, pred.sample()]

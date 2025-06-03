@@ -12,6 +12,8 @@ data:
 model:
   backbone:
     out_channels: 6 # Predicted RGB mean + predicted RGB stddev
+  min_std: 0.1 # Minimum stddev to stabilise
 
 execution:
   epochs: 20
+  gradient_clip_norm: 40.0

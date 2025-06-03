@@ -29,9 +29,6 @@ class DDPM(nn.Module):
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
         Computes the noise prediction loss for a batch of data.
-
-        :x: The input data (e.g., images).
-        :ctx: The context data (e.g., class labels).
         """
         labels = ctx.label_ctx
 
@@ -60,12 +57,12 @@ class DDPM(nn.Module):
         return x
 
     @torch.no_grad()
-    def sample(self, num_samples: int, ctx: ModelCtx) -> torch.Tensor:
+    def sample(self, ctx: ModelCtx, num_samples: int) -> torch.Tensor:
         """
         Generates samples from the model.
 
-        :num_samples: Number of samples to generate.
         :ctx: Context labels for the generation process.
+        :num_samples: Number of samples to generate.
         :return: Generated samples of shape `size`.
         """
 
@@ -80,3 +77,6 @@ class DDPM(nn.Module):
             # Update sample with step
             x = self.noise_scheduler.step(residual, t, x).prev_sample
         return x
+
+    def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:
+        return [self.sample(ctx, 4)]

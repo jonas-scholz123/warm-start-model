@@ -14,6 +14,7 @@ from mlbnb.profiler import WandbProfiler
 from mlbnb.rand import seed_everything
 from omegaconf import OmegaConf
 from torch import nn
+from torch.amp import GradScaler, autocast
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
@@ -102,6 +103,7 @@ class Trainer:
         self.scheduler = scheduler
         self.plotter = plotter
         self.preprocess_fn = preprocess_fn
+        self.grad_scaler = GradScaler()
 
         self.state = self._load_initial_state()
 
@@ -200,7 +202,7 @@ class Trainer:
         logger.info("Starting training")
 
         if self.plotter:
-            self.plotter.plot_prediction(self.model)
+            self.plotter.plot_prediction(self.model, s.epoch)
 
         while s.epoch <= self.cfg.execution.epochs:
             logger.info("Starting epoch {} / {}", s.epoch, self.cfg.execution.epochs)
@@ -249,19 +251,29 @@ class Trainer:
                 ctx, trg = self.preprocess_fn(batch)
 
             with p.profile("data.to"):
-                ctx = ctx.to(device)
-                trg = trg.to(device)
+                ctx = ctx.to(device, non_blocking=True)
+                trg = trg.to(device, non_blocking=True)
 
             with p.profile("forward"):
-                loss = self.model(ctx, trg)
+                with autocast(device_type=device.type, dtype=torch.float16):
+                    loss = self.model(ctx, trg)
 
             with p.profile("backward"):
-                loss.backward()
+                self.grad_scaler.scale(loss).backward()
                 self.metric_logger.log({"train_loss": loss.item()})
 
             with p.profile("optimizer.step"):
-                self.optimizer.step()
+                clip_norm: float = self.cfg.execution.gradient_clip_norm
+                if clip_norm > 0:
+                    self.grad_scaler.unscale_(self.optimizer)
+                    grad_norm = nn.utils.clip_grad_norm_(
+                        self.model.parameters(), clip_norm
+                    )
+                    self.metric_logger.log({"misc/grad_norm": grad_norm})
+
+                self.grad_scaler.step(self.optimizer)
                 self.optimizer.zero_grad()
+                self.grad_scaler.update()
 
             self.state.step += 1
 

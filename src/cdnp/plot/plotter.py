@@ -10,6 +10,8 @@ from torch.utils.data import Dataset
 from torch.utils.data._utils.collate import default_collate
 from torchvision.utils import make_grid, save_image
 
+from cdnp.model.cdnp import CDNP
+from cdnp.model.cnp import CNP
 from cdnp.model.ddpm import DDPM, ModelCtx
 
 
@@ -78,7 +80,7 @@ class CcgenPlotter(BasePlotter):
         ctx = ModelCtx(label_ctx=class_labels)
 
         total_samples = self._num_samples * self._num_classes
-        x_gen = model.sample(total_samples, ctx)
+        x_gen = model.sample(ctx, total_samples)
         x_gen = self._unnormalize(x_gen)
 
         grid = make_grid(x_gen, nrow=self._num_classes)
@@ -108,23 +110,26 @@ class InpaintPlotter(BasePlotter):
         self.ctx, self.trg = self._preprocess_fn(batch)
         self.ctx = self.ctx.to(self._device)
         self.trg = self.trg.to(self._device)
-        self.trg = self._unnormalize(self.trg)
 
     @torch.no_grad()
-    def plot_prediction(self, model: DDPM, epoch: int = 0) -> None:
-        x_gen = model.sample(self._num_samples, self.ctx)
+    def plot_prediction(self, model: DDPM | CNP | CDNP, epoch: int = 0) -> None:
+        plottables = []
+        x_gen = model.make_plot(self.ctx)
+        for x in x_gen:
+            x = self._unnormalize(x)
+            plottables.append(x)
+        num_channels = x_gen[0].shape[1]
 
         mask = self.ctx.image_ctx[:, -1:, :, :]
         masked_x = self.ctx.image_ctx[:, :-1, :, :]
 
-        num_channels = x_gen.shape[1]
-
         # Ensure mask has the same number of channels as the other tensors
         mask = mask.expand(-1, num_channels, -1, -1)
-
-        x_gen = self._unnormalize(x_gen)
         masked_x = self._unnormalize(masked_x)
+        trg = self._unnormalize(self.trg)
 
-        x_gen = torch.cat([self.trg, mask, masked_x, x_gen], dim=0)
+        plottables = [trg, mask, masked_x] + plottables
+
+        x_gen = torch.cat(plottables, dim=0)
         grid = make_grid(x_gen, nrow=self._num_samples)
         save_image(grid, self._get_path(epoch))

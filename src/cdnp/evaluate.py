@@ -1,10 +1,12 @@
 import torch
 from torch import nn
+from torch.amp import autocast
 from torch.utils.data.dataloader import DataLoader
 
 from cdnp.task import PreprocessFn
 
 
+@torch.no_grad()
 def evaluate(
     model: nn.Module,
     val_loader: DataLoader,
@@ -15,7 +17,7 @@ def evaluate(
     val_loss = 0
     device = next(model.parameters()).device
 
-    with torch.no_grad():
+    with autocast(device_type=device.type, dtype=torch.float16):
         for batch in val_loader:
             ctx, trg = preprocess_fn(batch)
             ctx = ctx.to(device)

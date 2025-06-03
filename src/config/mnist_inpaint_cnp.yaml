@@ -12,6 +12,7 @@ data:
 model:
   backbone:
     out_channels: 2 # Predicted mean + predicted stddev
+  min_std: 0.1 # Minimum stddev to stabilise
 
 execution:
   epochs: 20 
