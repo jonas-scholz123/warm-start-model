@@ -8,13 +8,21 @@ defaults:
 
 model:
   cnp:
-    backbone:
-      in_channels: 4 # masked RGB input + mask
-      out_channels: 6 # Mean + Std for each RGB channel
+    _target_: cdnp.util.instantiate.load_model_from_path
+    # this is for default fraction
+    #path: ${paths.weights}/2025-06-02_18-16_delightful_rabbit
+    # This is for 0.01-0.1 fraction
+    path: ${paths.weights}/2025-06-02_20-40_lucky_xenon
+    freeze: true # Freeze the trained CNP
   backbone:
     in_channels: 7 # noised RGB image + masked RGB input + mask
     out_channels: 3 # RGB image
   
 execution:
   epochs: 20
+
+data:
+  preprocess_fn:
+    min_frac: 0.01
+    max_frac: 0.1
  

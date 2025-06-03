@@ -266,7 +266,10 @@ class Trainer:
                 clip_norm: float = self.cfg.execution.gradient_clip_norm
                 if clip_norm > 0:
                     self.grad_scaler.unscale_(self.optimizer)
-                    nn.utils.clip_grad_norm_(self.model.parameters(), clip_norm)
+                    grad_norm = nn.utils.clip_grad_norm_(
+                        self.model.parameters(), clip_norm
+                    )
+                    self.metric_logger.log({"misc/grad_norm": grad_norm})
 
                 self.grad_scaler.step(self.optimizer)
                 self.optimizer.zero_grad()

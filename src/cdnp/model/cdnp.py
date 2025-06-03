@@ -96,8 +96,6 @@ class CDNP(nn.Module):
         mean = cnp_dist.mean
         std = cnp_dist.stddev
         plots = [mean, std]
-        plots.append(torch.zeros_like(mean))
-        plots.append(torch.ones_like(mean))
 
         x = cnp_dist.sample()
 
