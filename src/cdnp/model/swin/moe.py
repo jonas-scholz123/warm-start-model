@@ -19,7 +19,7 @@ class LoadBalancingLosses:
 def _softmax_then_top_k(
     logits: torch.Tensor, k: int, dim: int
 ) -> Tuple[torch.Tensor, torch.Tensor]:
-    return torch.topk(torch.softmax(logits, dim=dim), k=k, dim=dim)
+    return torch.topk(torch.softmax(logits, dim=dim), k=k, dim=dim)  # ty: ignore
 
 
 def _top_k_then_softmax(
@@ -142,7 +142,9 @@ class MixtureOfExperts(torch.nn.Module):
         eps = 1e-10
         importance = gate_probs.sum(dim=0)  # shape (num_experts,)
         loss_importance: torch.Tensor = (
-            self.w_importance * importance.var() / (importance.mean() ** 2 + eps)
+            self.w_importance
+            * importance.var()
+            / (importance.mean() ** 2 + eps)  # ty: ignore
         )
         return loss_importance
 
@@ -215,7 +217,9 @@ class MixtureOfExperts(torch.nn.Module):
             load = gates_khot.sum(dim=0).type(gate_logits.dtype)  # shape (num_experts,)
 
         eps = 1e-10
-        loss_load: torch.Tensor = self.w_load * load.var() / (load.mean() ** 2 + eps)
+        loss_load: torch.Tensor = (
+            self.w_load * load.var() / (load.mean() ** 2 + eps)  # ty: ignore
+        )
         return loss_load
 
     def forward(

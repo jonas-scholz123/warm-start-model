@@ -98,12 +98,8 @@ class TimeEmbedding(FourierExpansionEmbedding):
     ) -> None:
         super().__init__(min_scale, max_scale, num_scales)
 
-    def forward(
-        self,
-        x: npt.NDArray[np.datetime64],  # type: ignore
-    ) -> torch.Tensor:
-        hours = _get_hours_from_reference_time(x)
-        return super().forward(torch.tensor(hours).float())
+    def forward(self, hours: torch.Tensor) -> torch.Tensor:
+        return super().forward(hours.float())
 
 
 class SpatialEmbedding(FourierExpansionEmbedding):

@@ -22,7 +22,7 @@ class DDPM(nn.Module):
         self.device = device
         self.num_timesteps = noise_scheduler.config.num_train_timesteps  # ty: ignore
 
-        self.sidelength = backbone.sample_size  # ty: ignore
+        self.height, self.width = backbone.sample_size  # ty: ignore
         self.in_channels = backbone.config.in_channels  # ty: ignore
         self.out_channels = backbone.config.out_channels  # ty: ignore
 
@@ -66,7 +66,7 @@ class DDPM(nn.Module):
         :return: Generated samples of shape `size`.
         """
 
-        shape = (num_samples, self.out_channels, self.sidelength, self.sidelength)
+        shape = (num_samples, self.out_channels, self.height, self.width)
 
         x = torch.randn(*shape).to(self.device)
         labels = ctx.label_ctx

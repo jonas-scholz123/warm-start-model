@@ -1,0 +1,23 @@
+# @package _global_
+
+model:
+  backbone:
+    _target_: cdnp.model.swin.transformer.SwinTransformer
+    height: 128
+    width: 256
+    patch_size: 2
+    token_dimensions: [256, 256, 256]
+    in_channels: ???
+    output_dimension: ???
+    window_size: 4
+    num_heads: 8
+    num_blocks_per_stage: [2, 2]
+    feedforward_network:
+      _target_: cdnp.model.swin.mlp.MLP
+      _partial_: true
+      hidden_features: 512
+      num_hidden_layers: 2
+    pos_embedding:
+      _target_: cdnp.model.swin.embeddings.SpatialEmbedding
+      num_scales: 128
+      token_dimension: 256

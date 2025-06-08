@@ -1,22 +1,17 @@
 from collections.abc import Callable
-from typing import (
-    List,
-    Optional,
-    Sequence,
-)
+from typing import Optional, Sequence, Union
 
 import torch
+from diffusers.models.unets.unet_2d import UNet2DOutput
 from torch import nn
 
 from cdnp.model.swin.embeddings import (
     PositionEmbedding,
     SpatialEmbedding,
 )
-from cdnp.model.swin.moe import LoadBalancingLosses
 from cdnp.model.swin.tokeniser import ImageTokeniser
 from cdnp.model.swin.transformer_blocks import make_swin_stage
 from cdnp.model.swin.utils import (
-    aggregate_load_balancing_losses,
     conv_channel_last,
     pad_bottom_right,
 )
@@ -130,15 +125,23 @@ class SwinTransformer(nn.Module):
     def forward(
         self,
         x: torch.Tensor,
-    ) -> tuple[torch.Tensor, Optional[LoadBalancingLosses]]:
+        # TODO: Use these inputs in the future
+        timestep: Union[torch.Tensor, float, int],
+        class_labels: Optional[torch.Tensor] = None,
+        return_dict: bool = True,
+    ) -> UNet2DOutput:
         """Apply vision transformer to batch of images.
 
         Arguments:
-            x: input image tensor of shape (B, H, W, C)
+            x: input image tensor of shape (B, C, H, W)
 
         Returns:
-            output logits tensor of shape (B, H, W, C)
+            output logits tensor of shape (B, C, H, W)
         """
+        # Convert from B, C, H, W -> B, H, W, C
+        # which is the Otter convention
+        x = x.permute(0, 2, 3, 1)
+
         _, original_height, original_width, _ = x.shape
 
         # Pad input to target dimensions
@@ -148,7 +151,6 @@ class SwinTransformer(nn.Module):
         x = self.embedding(x)
 
         skips = []
-        load_balancing_losses_list: List[LoadBalancingLosses] = list()
 
         for downsampling_conv, down_swin_stage in zip(
             self.patch_downsampling_layers,
@@ -157,8 +159,7 @@ class SwinTransformer(nn.Module):
             skips.append(x)
             x = downsampling_conv(x.permute(0, 3, 1, 2)).permute(0, 2, 3, 1)
             for swin_transformer_block in down_swin_stage:
-                x, load_balancing_losses_per_block = swin_transformer_block(x)
-                load_balancing_losses_list += load_balancing_losses_per_block
+                x, _ = swin_transformer_block(x)
 
         for upsampling_conv, up_swin_stage, skip in zip(
             self.patch_upsampling_layers,
@@ -166,8 +167,7 @@ class SwinTransformer(nn.Module):
             skips[::-1],
         ):
             for swin_transformer_block in up_swin_stage:
-                x, load_balancing_losses_per_block = swin_transformer_block(x)
-                load_balancing_losses_list += load_balancing_losses_per_block
+                x, _ = swin_transformer_block(x)
             x = upsampling_conv(x.permute(0, 3, 1, 2)).permute(0, 2, 3, 1)
             x = x + skip
 
@@ -176,4 +176,6 @@ class SwinTransformer(nn.Module):
         # Crop the padding to restore original dimensions
         x = x[:, :original_height, :original_width, :]
 
-        return x, aggregate_load_balancing_losses(load_balancing_losses_list)
+        x = x.permute(0, 3, 1, 2)  # Convert back to B, C, H, W
+
+        return UNet2DOutput(sample=x)

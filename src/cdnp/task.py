@@ -3,6 +3,7 @@ from typing import Callable
 import torch
 
 from cdnp.model.ddpm import ModelCtx
+from cdnp.model.swin.embeddings import TimeEmbedding
 
 PreprocessFn = Callable[
     tuple[torch.Tensor, torch.Tensor], tuple[ModelCtx, torch.Tensor]
@@ -35,3 +36,42 @@ def preprocess_inpaint(
     # Concat along the channel dimension
     ctx = torch.cat([x_masked, mask], dim=1)
     return ModelCtx(image_ctx=ctx), x
+
+
+def preprocess_weather_forecast(
+    batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
+) -> tuple[ModelCtx, torch.Tensor]:
+    zero_time, static, dyn, trg = batch
+
+
+    B, lat, lon, time, var = dyn.shape
+
+    # For now (no time embeddings), just fold the time dimension into the var dimension.
+    dyn = dyn.reshape(B, lat, lon, time * var)
+
+    B, lat, lon, time, var = trg.shape
+    if time > 1:
+        raise NotImplementedError("Only single target time step is supported for now.")
+    trg = trg.reshape(B, lat, lon, time * var)
+
+    # Match convention of other datasets to have channels first.
+
+    # Convert to (B, time*var, lat, lon)
+    dyn = dyn.permute(0, 3, 1, 2)
+    trg = trg.permute(0, 3, 1, 2)
+
+    time_embedding = get_time_embedding(zero_time)
+    time_embedding = time_embedding.expand((-1, -1, lat, lon))
+
+
+    # Have dyn at the end, because it's used as the residual.
+
+    ctx = torch.cat([static, dyn, time_embedding], dim=1)  # (B, static+dyn, lat, lon)
+
+    return ModelCtx(image_ctx=ctx), trg
+
+
+def get_time_embedding(zero_time: torch.Tensor) -> torch.Tensor:
+    embed_module = TimeEmbedding(num_scales=16)  # (B, 32)
+    embeds = embed_module(zero_time)
+    return embeds[:, :, None, None]

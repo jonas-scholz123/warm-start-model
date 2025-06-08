@@ -8,7 +8,6 @@ from typing import (
 import torch
 from torch import nn
 
-from cdnp.model.swin.attention import EfficientMultiHeadAttention
 from cdnp.model.swin.moe import LoadBalancingLosses
 
 
@@ -183,19 +182,11 @@ class TransformerBlock(nn.Module):
 
         self.mhsa: Callable[[torch.Tensor], torch.Tensor]
 
-        if use_efficient_attention:
-            self.efficient_mha_layer = EfficientMultiHeadAttention(
-                num_heads=num_heads,
-                token_dim=token_dim,
-            )
-            self.mhsa = lambda x: (self.efficient_mha_layer(x, x, x))
-
-        else:
-            self.mha_layer = nn.MultiheadAttention(
-                embed_dim=token_dim,
-                num_heads=num_heads,
-            )
-            self.mhsa = lambda x: (self.mha_layer(x, x, x)[0])
+        self.mha_layer = nn.MultiheadAttention(
+            embed_dim=token_dim,
+            num_heads=num_heads,
+        )
+        self.mhsa = lambda x: (self.mha_layer(x, x, x)[0])
 
         self.ffn = feedforward_network(token_dim, token_dim)
 

@@ -3,6 +3,9 @@ dataset:
   _partial_: true
   norm_means: [0.5, 0.5, 0.5]
   norm_stds: [0.5, 0.5, 0.5]
+  val_fraction: 0.1
+  paths: ${paths}
 in_channels: 3
 num_classes: null
-sidelength: 64
+width: 64
+height: 64

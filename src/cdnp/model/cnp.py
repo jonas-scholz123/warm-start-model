@@ -12,11 +12,13 @@ class CNP(nn.Module):
         backbone: UNet2DModel,
         device: str,
         min_std: float = 1e-6,
+        residual: bool = False,
     ):
         super().__init__()
         self.backbone = backbone
         self.device = device
         self.min_std = min_std
+        self.residual = residual
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
@@ -30,7 +32,7 @@ class CNP(nn.Module):
         return self.nll(prd_dist, trg)
 
     def predict(self, ctx: ModelCtx) -> Normal:
-        im_ctx = ctx.image_ctx
+        im_ctx = ctx.image_ctx  # (B, C, H, W)
         labels = ctx.label_ctx
 
         assert im_ctx is not None, "Image context must be provided for CNP."
@@ -42,6 +44,12 @@ class CNP(nn.Module):
         pred = self.backbone(im_ctx, timesteps, class_labels=labels).sample
 
         mean, std = pred.chunk(2, dim=1)
+        if self.residual:
+            num_trg_channels = mean.shape[1]
+            # By convention, the last channels of the image context should be the
+            # residuals.
+            res = im_ctx[:, -num_trg_channels:, :, :]
+            mean = res + mean
         std = nn.functional.softplus(std)
         std = torch.clamp(std, min=self.min_std)
         return Normal(mean, std)
@@ -55,10 +63,10 @@ class CNP(nn.Module):
         Generates samples from the model.
 
         :ctx: Context labels for the generation process. Shape:
-            (num_samples, in_channels, sidelength, sidelength)
+            (num_samples, in_channels, height, width)
         :num_samples: (ignored)
         :return: Generated samples of shape
-            (num_samples, out_channels, sidelength, sidelength).
+            (num_samples, out_channels, height, width).
         """
         prd_dist = self.predict(ctx)
         return prd_dist.sample()
@@ -69,4 +77,4 @@ class CNP(nn.Module):
 
     def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:
         pred = self.predict(ctx)
-        return [pred.mean, pred.stddev, pred.sample()]
+        return [ctx.image_ctx, pred.mean, pred.stddev, pred.sample()]

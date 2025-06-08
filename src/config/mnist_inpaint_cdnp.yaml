@@ -7,6 +7,7 @@ defaults:
   - _self_
 
 model:
+  min_std: 0.05 # Minimum stddev to stabilise
   backbone:
     in_channels: 3 # noised greyscale image + masked input + mask
     out_channels: 1 # Just the greyscale image
@@ -15,7 +16,9 @@ model:
     device: ${runtime.device}
     backbone:
       _target_: diffusers.UNet2DModel
-      sample_size: ${data.sidelength}
+      sample_size:
+        - ${data.height}
+        - ${data.width}
       layers_per_block: 2
       resnet_time_scale_shift: "scale_shift"
       in_channels: 2 # masked input + mask

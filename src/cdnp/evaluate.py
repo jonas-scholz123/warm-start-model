@@ -27,4 +27,6 @@ def evaluate(
             if dry_run:
                 break
 
+    val_loss /= len(val_loader)
+
     return {"val_loss": val_loss}

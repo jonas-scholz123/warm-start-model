@@ -10,9 +10,11 @@ from torch.utils.data import Dataset
 from torch.utils.data._utils.collate import default_collate
 from torchvision.utils import make_grid, save_image
 
+from cdnp.data.era5 import GriddedWeatherTask
 from cdnp.model.cdnp import CDNP
 from cdnp.model.cnp import CNP
 from cdnp.model.ddpm import DDPM, ModelCtx
+from cdnp.plot.geoplot import GeoPlotter
 
 
 class BasePlotter(ABC):
@@ -133,3 +135,52 @@ class InpaintPlotter(BasePlotter):
         x_gen = torch.cat(plottables, dim=0)
         grid = make_grid(x_gen, nrow=self._num_samples)
         save_image(grid, self._get_path(epoch))
+
+
+class ForecastPlotter(BasePlotter):
+    def __init__(
+        self,
+        device: str | torch.device,
+        num_samples: int,
+        test_data: GriddedWeatherTask,
+        preprocess_fn: Callable[[Any], tuple[ModelCtx, torch.Tensor]],
+        save_to: Optional[ExperimentPath] = None,
+    ):
+        # TODO: normalisation params
+        means = (0.0, 0.0, 0.0)  # Placeholder means
+        stds = (1.0, 1.0, 1.0)  # Placeholder stds
+        super().__init__(device, means, stds, save_to)
+        self._num_samples = num_samples
+        self._dataset = test_data
+        self._preprocess_fn = preprocess_fn
+        self._geoplotter = GeoPlotter()
+
+        test_elements = []
+        for i in range(self._num_samples):
+            test_elements.append(self._dataset[i])
+        batch = default_collate(test_elements)
+        self.ctx, self.trg = self._preprocess_fn(batch)
+        self.ctx = self.ctx.to(self._device)
+        self.trg = self.trg.to(self._device)
+
+    @torch.no_grad()
+    def plot_prediction(self, model: DDPM | CNP | CDNP, epoch: int = 0) -> None:
+        plottables = model.make_plot(self.ctx)  # B, C, H, W
+        plottables = [self.trg] + plottables
+        # Take the first sample from each batch
+        plottables = [p[0, ...] for p in plottables]  # C, H, W
+        plottables = [p.permute(1, 2, 0) for p in plottables]  # H, W, C
+
+        plottables_flat = []
+        for p in plottables:
+            for c in range(p.shape[-1]):
+                plottables_flat.append(p[..., c : c + 1])  # H, W, 1
+
+        grid = torch.stack(plottables_flat[::5], dim=-1)
+        fig = self._geoplotter.plot_grid(
+            data=grid,
+            col_titles=[f"Sample {i + 1}" for i in range(grid.shape[-2])],
+            row_titles=[f"Channel {i + 1}" for i in range(grid.shape[-1])],
+            share_cmap="none",
+        )
+        fig.savefig(self._get_path(epoch, "forecast_plot"), bbox_inches="tight")
