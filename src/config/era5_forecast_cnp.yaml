@@ -21,7 +21,7 @@ data:
   trainloader:
     batch_size: 4
   testloader:
-    batch_size: 4
+    batch_size: 8
 
 optimizer:
   lr: 1e-4

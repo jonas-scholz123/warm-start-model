@@ -174,9 +174,14 @@ class ForecastPlotter(BasePlotter):
         plottables_flat = []
         for p in plottables:
             for c in range(p.shape[-1]):
-                plottables_flat.append(p[..., c : c + 1])  # H, W, 1
+                single_channel = p[..., c : c + 1]
+                if single_channel.std().item() == 0:
+                    # Skip constant channels like time embeddings
+                    continue
 
-        grid = torch.stack(plottables_flat[::5], dim=-1)
+                plottables_flat.append(single_channel)  # H, W, 1
+
+        grid = torch.stack(plottables_flat, dim=-1)
         fig = self._geoplotter.plot_grid(
             data=grid,
             col_titles=[f"Sample {i + 1}" for i in range(grid.shape[-2])],

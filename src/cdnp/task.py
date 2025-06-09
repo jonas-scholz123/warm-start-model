@@ -43,7 +43,6 @@ def preprocess_weather_forecast(
 ) -> tuple[ModelCtx, torch.Tensor]:
     zero_time, static, dyn, trg = batch
 
-
     B, lat, lon, time, var = dyn.shape
 
     # For now (no time embeddings), just fold the time dimension into the var dimension.
@@ -63,10 +62,9 @@ def preprocess_weather_forecast(
     time_embedding = get_time_embedding(zero_time)
     time_embedding = time_embedding.expand((-1, -1, lat, lon))
 
-
     # Have dyn at the end, because it's used as the residual.
 
-    ctx = torch.cat([static, dyn, time_embedding], dim=1)  # (B, static+dyn, lat, lon)
+    ctx = torch.cat([static, time_embedding, dyn], dim=1)  # (B, static+dyn, lat, lon)
 
     return ModelCtx(image_ctx=ctx), trg
 

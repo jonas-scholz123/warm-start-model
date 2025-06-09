@@ -1,7 +1,9 @@
 from collections.abc import Callable
 from typing import Optional, Sequence, Union
 
+import matplotlib.pyplot as plt
 import torch
+import torch.nn.functional as F
 from diffusers.models.unets.unet_2d import UNet2DOutput
 from torch import nn
 
@@ -11,10 +13,20 @@ from cdnp.model.swin.embeddings import (
 )
 from cdnp.model.swin.tokeniser import ImageTokeniser
 from cdnp.model.swin.transformer_blocks import make_swin_stage
-from cdnp.model.swin.utils import (
-    conv_channel_last,
-    pad_bottom_right,
-)
+from cdnp.model.swin.utils import geopad
+from cdnp.plot.geoplot import GeoPlotter
+
+
+def interpolate_bilinear_channel_last(
+    x: torch.Tensor, height: int, width: int
+) -> torch.Tensor:
+    out: torch.Tensor = torch.nn.functional.interpolate(
+        x.permute(0, 3, 1, 2),
+        size=(height, width),
+        mode="bilinear",
+        align_corners=False,
+    ).permute(0, 2, 3, 1)
+    return out
 
 
 class SwinTransformer(nn.Module):
@@ -32,6 +44,7 @@ class SwinTransformer(nn.Module):
         feedforward_network: Callable[[int, int], nn.Module],
         pos_embedding: PositionEmbedding | SpatialEmbedding,
         use_efficient_attention: bool = True,
+        pad_dont_interpolate: bool = True,
     ):
         super().__init__()
 
@@ -112,15 +125,29 @@ class SwinTransformer(nn.Module):
 
         self.embedding = pos_embedding
 
+        # self.final_conv = UpsampleLayer(
+        #    in_channels=token_dimensions[-1],
+        #    out_channels=output_dimension,
+        # )
+
         self.final_conv = nn.ConvTranspose2d(
             in_channels=token_dimensions[-1],
             out_channels=output_dimension,
             stride=(patch_size, patch_size),
             kernel_size=(patch_size, patch_size),
         )
+        self.final_conv2 = nn.Conv2d(
+            in_channels=output_dimension,
+            out_channels=output_dimension,
+            kernel_size=3,
+            stride=1,
+            padding=1,
+        )
 
+        self.pad_dont_interpolate = pad_dont_interpolate
         self.width = width
         self.height = height
+        self.plot_count = 0
 
     def forward(
         self,
@@ -142,13 +169,28 @@ class SwinTransformer(nn.Module):
         # which is the Otter convention
         x = x.permute(0, 2, 3, 1)
 
+        x = make_debug_input(x)
+
         _, original_height, original_width, _ = x.shape
 
-        # Pad input to target dimensions
-        x = pad_bottom_right(x, target_height=self.height, target_width=self.width)
+        self.debug_plot(x)
 
+        if self.pad_dont_interpolate:
+            # Pad input to target dimensions
+            x = geopad(x, target_height=self.height, target_width=self.width)
+        else:
+            x = interpolate_bilinear_channel_last(
+                x, height=self.height, width=self.width
+            )
+
+        self.debug_plot(x)
+        x = make_debug_input(x)
+        self.debug_plot(x)
+        # print("Tokenisation, ", self.plot_count)
         x = self.tokeniser(x)
+        self.debug_plot(x)
         x = self.embedding(x)
+        self.debug_plot(x)
 
         skips = []
 
@@ -157,9 +199,13 @@ class SwinTransformer(nn.Module):
             self.down_swin_stages,
         ):
             skips.append(x)
-            x = downsampling_conv(x.permute(0, 3, 1, 2)).permute(0, 2, 3, 1)
+            x = self.apply_geoconv(downsampling_conv, x)
+            self.debug_plot(x)
             for swin_transformer_block in down_swin_stage:
                 x, _ = swin_transformer_block(x)
+                self.debug_plot(x)
+
+        # print("All the way down", self.plot_count)
 
         for upsampling_conv, up_swin_stage, skip in zip(
             self.patch_upsampling_layers,
@@ -168,14 +214,193 @@ class SwinTransformer(nn.Module):
         ):
             for swin_transformer_block in up_swin_stage:
                 x, _ = swin_transformer_block(x)
-            x = upsampling_conv(x.permute(0, 3, 1, 2)).permute(0, 2, 3, 1)
+
+            # print("Upsampling", self.plot_count)
+            x = make_debug_input(x)
+            x = self.apply_geoupsample(upsampling_conv, x)
+            self.debug_plot(x)
             x = x + skip
+            self.debug_plot(x)
 
-        x = conv_channel_last(self.final_conv, x)
+        x = make_debug_input(x)
+        x = self.apply_geoupsample(self.final_conv, x)
+        self.debug_plot(x)
+        x = make_debug_input(x)
+        self.debug_plot(x)
+        x = self.apply_geoconv(self.final_conv2, x)
+        self.debug_plot(x)
 
-        # Crop the padding to restore original dimensions
-        x = x[:, :original_height, :original_width, :]
+        if self.pad_dont_interpolate:
+            # Crop the padding to restore original dimensions
+            x = x[:, :original_height, :original_width, :]
+        else:
+            x = interpolate_bilinear_channel_last(
+                x, height=original_height, width=original_width
+            )
+        self.debug_plot(x)
 
         x = x.permute(0, 3, 1, 2)  # Convert back to B, C, H, W
+        self.plot_count = 0
 
         return UNet2DOutput(sample=x)
+
+    def apply_geoconv_old(self, conv_layer: nn.Module, x: torch.Tensor) -> torch.Tensor:
+        # print("GEOCONV")
+        print(x.shape)
+        x = x.permute(0, 3, 1, 2)
+        print(x.shape)
+
+        k_lat, k_lon = conv_layer.kernel_size  # ty: ignore
+        pad_lat = k_lat - 1
+        pad_lon = k_lon - 1
+
+        pad_lat_top = pad_lat // 2
+        pad_lat_bottom = pad_lat - pad_lat_top
+        pad_lon_left = pad_lon // 2
+        pad_lon_right = pad_lon - pad_lon_left
+
+        print(self.plot_count)
+        self.debug_plot(x.permute(0, 2, 3, 1))
+
+        if pad_lon > 0:
+            if pad_lon_left < 1 or pad_lon_right < 1:
+                raise ValueError(
+                    "Longitude padding must be at least 1 pixel on both sides."
+                )
+            # print(pad_lon_left, pad_lon_right)
+            x_padded_lon = torch.cat(
+                [x[..., -pad_lon_left:], x, x[..., :pad_lon_right]], dim=3
+            )
+        else:
+            x_padded_lon = x
+
+        self.debug_plot(x_padded_lon.permute(0, 2, 3, 1))
+        print(f"Padding lat: {pad_lat}, lon: {pad_lon}")
+        # print(f"{x_padded_lon.shape=}")
+        if pad_lat > 0:
+            x_padded = F.pad(
+                x_padded_lon,
+                (0, 0, pad_lat_top, pad_lat_bottom),
+                mode="constant",
+                value=0,
+            )
+        else:
+            x_padded = x_padded_lon
+        # print(x_padded.shape)
+
+        # The provided conv_layer must have padding=0
+        self.debug_plot(x_padded.permute(0, 2, 3, 1))
+        output = conv_layer(x_padded)
+        # print(output.shape)
+
+        return output.permute(0, 2, 3, 1)
+
+    def apply_geoconv2(self, conv_layer: nn.Module, x: torch.Tensor) -> torch.Tensor:
+        # print(x.shape)
+        x = x.permute(0, 3, 1, 2)
+
+        k_lat, k_lon = conv_layer.kernel_size  # ty: ignore
+
+        # Padding required to center the kernel. For even kernels, we pad more
+        # on the 'before' side (top/left) to counteract the kernel's spatial shift.
+        pad_lat_top = (k_lat - 1) // 2 + (k_lat % 2 == 0)
+        pad_lat_bottom = (k_lat - 1) // 2
+
+        pad_lon_left = (k_lon - 1) // 2 + (k_lon % 2 == 0)
+        pad_lon_right = (k_lon - 1) // 2
+
+        # print(f"Padding lat: {pad_lat_top} + {pad_lat_bottom}")
+        print(f"Padding lon: {pad_lon_left} + {pad_lon_right}")
+
+        # Apply longitude padding (circular)
+        if pad_lon_left > 0 or pad_lon_right > 0:
+            x = torch.cat([x[..., -pad_lon_left:], x, x[..., :pad_lon_right]], dim=3)
+
+        # Apply latitude padding (zero-padding)
+        x = F.pad(x, (0, 0, pad_lat_top, pad_lat_bottom), mode="constant", value=0)
+
+        output = conv_layer(x)
+
+        return output.permute(0, 2, 3, 1)
+
+    def apply_geoconv(self, conv_layer: nn.Module, x: torch.Tensor) -> torch.Tensor:
+        x = x.permute(0, 3, 1, 2)
+        output = conv_layer(x)
+        return output.permute(0, 2, 3, 1)
+
+    def apply_geoupsample(
+        self, upsampling_layer: nn.Module, x: torch.Tensor
+    ) -> torch.Tensor:
+        x = x.permute(0, 3, 1, 2)
+        output = upsampling_layer(x)
+        return output.permute(0, 2, 3, 1)
+
+    def apply_geoupsample2(
+        self, upsampling_layer: nn.Module, x: torch.Tensor
+    ) -> torch.Tensor:
+        x = x.permute(0, 3, 1, 2)
+        print("GEOUPSAMPLE", self.plot_count)
+        self.debug_plot(x.permute(0, 2, 3, 1))
+        target_lat = x.shape[2] * upsampling_layer.stride[0]  # ty: ignore
+        target_lon = x.shape[3] * upsampling_layer.stride[1]  # ty: ignore
+
+        output = upsampling_layer(x)
+        self.debug_plot(output.permute(0, 2, 3, 1))
+
+        current_lat = output.shape[2]
+        crop_lat = current_lat - target_lat
+        if crop_lat > 0:
+            crop_top = crop_lat // 2
+            crop_bottom = crop_lat - crop_top
+            output = output[:, :, crop_top : current_lat - crop_bottom, :]
+
+        # --- Fix Longitude (Wrapping) ---
+        # Symmetrically crop the extra pixels, but add them back to the opposite side.
+        current_lon = output.shape[3]
+        crop_lon = current_lon - target_lon
+        if crop_lon > 0:
+            crop_left = crop_lon // 2
+            crop_right = crop_lon - crop_left
+
+            # Extract the central part and the spillover from both sides
+            center = output[:, :, :, crop_left : current_lon - crop_right]
+            left_spill = output[:, :, :, :crop_left]
+            right_spill = output[:, :, :, -crop_right:]
+
+            # Add the spillover to the opposite ends of the central part
+            center[:, :, :, :crop_right] += right_spill
+            center[:, :, :, -crop_left:] += left_spill
+            output = center
+        self.debug_plot(output.permute(0, 2, 3, 1))
+
+        return output.permute(0, 2, 3, 1)
+
+    def debug_plot(self, x: torch.Tensor) -> None:
+        return
+        """Plot the input tensor x using GeoPlotter."""
+        gp = GeoPlotter()
+        fig = gp.plot_single(x[0, :, :, -1])
+        fig.savefig(f"debug_{self.plot_count}_input.png")
+        plt.close(fig)
+
+        self.plot_count += 1
+
+
+def make_debug_input(x: torch.Tensor) -> torch.Tensor:
+    """Create a debug input tensor with a gradient pattern."""
+    return x
+    lat, lon = x.shape[1], x.shape[2]
+
+    grid_x = torch.linspace(-1, 1, steps=lon)
+    grid_y = torch.linspace(-1, 1, steps=lat)
+
+    # Create 2D gradient by averaging x and y using broadcasting
+    grid = (grid_x[None, :] + grid_y[:, None]) / 2  # Shape: (height, width)
+    grid = grid[:, :, None]
+
+    grid[...] = 0
+    # grid[:, -1, :] = -5
+    grid[:, 0, :] = -5
+    x[0, :, :, :] = grid
+
+    return x

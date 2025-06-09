@@ -37,21 +37,17 @@ TaskType = tuple[torch.Tensor, torch.Tensor]
 
 @hydra.main(version_base=None, config_name="base", config_path="../config")
 def main(cfg: Config) -> float:
-    try:
-        _configure_outputs()
+    _configure_outputs()
 
-        logger.debug(OmegaConf.to_yaml(cfg))
+    logger.debug(OmegaConf.to_yaml(cfg))
 
-        seed_everything(cfg.execution.seed)
+    seed_everything(cfg.execution.seed)
 
-        trainer = Trainer.from_config(cfg)
-        trainer.train_loop()
-        if cfg.output.use_wandb:
-            wandb.finish()
-        return trainer.state.best_val_loss
-    except Exception as e:
-        logger.exception("An error occurred during training: {}", e)
-        raise e
+    trainer = Trainer.from_config(cfg)
+    trainer.train_loop()
+    if cfg.output.use_wandb:
+        wandb.finish()
+    return trainer.state.best_val_loss
 
 
 def _configure_outputs():

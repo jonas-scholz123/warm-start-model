@@ -1,6 +1,7 @@
 _data/
 _weights/
 _output/
+debug_*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

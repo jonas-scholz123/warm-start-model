@@ -91,17 +91,6 @@ class GeoPlotter:
 
         ax.coastlines()  # type: ignore
 
-        gl = ax.gridlines(  # type: ignore
-            crs=ccrs.PlateCarree(),
-            draw_labels=True,
-            linewidth=1,
-            color="gray",
-            alpha=0.5,
-            linestyle="--",
-        )
-        gl.top_labels = False
-        gl.right_labels = False
-
         mappable = plt.cm.ScalarMappable(cmap=self.cmap)
         mappable.set_array(data_np)
         mappable.set_clim(vmin, vmax)
