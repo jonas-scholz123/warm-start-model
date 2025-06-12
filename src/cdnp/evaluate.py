@@ -16,6 +16,7 @@ def evaluate(
     model.eval()
     val_loss = 0
     device = next(model.parameters()).device
+    num_batches = 0
 
     with autocast(device_type=device.type, dtype=torch.float16):
         for batch in val_loader:
@@ -23,10 +24,11 @@ def evaluate(
             ctx = ctx.to(device)
             trg = trg.to(device)
             val_loss += model(ctx, trg).item()
+            num_batches += 1
 
             if dry_run:
                 break
 
-    val_loss /= len(val_loader)
+    val_loss /= num_batches
 
     return {"val_loss": val_loss}

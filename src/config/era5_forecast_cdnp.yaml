@@ -7,6 +7,7 @@ defaults:
   - _self_
 
 model:
+  initial_std_mult: 20.0
   cnp:
     _target_: cdnp.util.instantiate.load_model_from_path
     path: ${paths.weights}/2025-06-10_12-53_lucky_kangaroo

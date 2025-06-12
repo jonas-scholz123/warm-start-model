@@ -16,6 +16,7 @@ class CDNP(nn.Module):
         noise_scheduler: CDNPScheduler,
         cnp: CNP,
         device: str,
+        initial_std_mult: float = 1.0,
         # TODO: take a torch.Generator
     ):
         super().__init__()
@@ -26,7 +27,8 @@ class CDNP(nn.Module):
         self.device = device
         self.num_timesteps = noise_scheduler.config.num_train_timesteps  # ty: ignore
         self.cnp = cnp
-        self.std_mult = 1
+        self.initial_std_mult = initial_std_mult
+        self.std_mult = initial_std_mult
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         """
@@ -125,3 +127,8 @@ class CDNP(nn.Module):
         plots.append(x)
 
         return plots
+
+    def set_steps(self, steps: int) -> None:
+        stages = steps / 500
+        # This helps the model learn at the start by making the noise more obvious.
+        self.std_mult = max(self.initial_std_mult / 2**stages, 1.0)

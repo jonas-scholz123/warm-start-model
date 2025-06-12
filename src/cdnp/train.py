@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cdnp.evaluate import evaluate
+from cdnp.model.cdnp import CDNP
 from cdnp.plot.plotter import CcgenPlotter
 from cdnp.task import PreprocessFn
 from cdnp.util.instantiate import Experiment
@@ -232,6 +233,8 @@ class Trainer:
 
     def train_epoch(self) -> None:
         self.model.train()
+        if isinstance(self.model, CDNP):
+            self.model.set_steps(self.state.step)
         device = next(self.model.parameters()).device
         train_loader: tqdm[TaskType] = tqdm(
             self.train_loader, disable=not self.cfg.output.use_tqdm
