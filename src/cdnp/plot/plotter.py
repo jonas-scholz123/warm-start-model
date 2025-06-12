@@ -179,6 +179,9 @@ class ForecastPlotter(BasePlotter):
                     # Skip constant channels like time embeddings
                     continue
 
+                if len(plottables_flat) > 20:
+                    break
+
                 plottables_flat.append(single_channel)  # H, W, 1
 
         grid = torch.stack(plottables_flat, dim=-1)

@@ -206,6 +206,7 @@ class TransformerBlock(nn.Module):
             output tensor of shape (B, N, D)
         """
 
+        # print("X shape in transformer block:", x.shape)
         x = x + self.mhsa(self.ln1(x))
         x_ffn, load_balancing_losses = self.ffn(self.ln2(x))
         x = x + x_ffn

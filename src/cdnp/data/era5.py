@@ -230,10 +230,13 @@ class GriddedWeatherTask(
         data_source: ZarrDatasource,
         start_date: str,
         end_date: str,
+        val_start_date: str,
+        val_end_date: str,
         num_context_frames: int,
         num_target_frames: int,
         temporal_resolution_hours: int,
         norm_path: str,
+        split: Split,
         ctx_surface_dynamic_variables: List[str] = ALL_GRID_SURFACE_DYNAMIC_VARIABLES,
         ctx_multilevel_dynamic_variables: List[
             str
@@ -252,8 +255,15 @@ class GriddedWeatherTask(
 
         # Start and end dates that will be used to form training tasks,
         # i.e. no tasks will contain data outside of this range.
-        self.start_date = np.datetime64(start_date)
-        self.end_date = np.datetime64(end_date)
+
+        if split == Split.VAL or split == Split.TEST:
+            self.start_date = np.datetime64(val_start_date)
+            self.end_date = np.datetime64(val_end_date)
+            # TODO test split separate
+        else:
+            # Default to training split
+            self.start_date = np.datetime64(start_date)
+            self.end_date = np.datetime64(end_date)
 
         # Temporal resolution of the tasks in hours. This is used as the
         # lead time resolution as well as the context frame resolution.
@@ -402,6 +412,8 @@ def make_gridded_weather_task(
     data_source: ZarrDatasource,
     start_date: str,
     end_date: str,
+    val_start_date: str,
+    val_end_date: str,
     num_context_frames: int,
     num_target_frames: int,
     temporal_resolution_hours: int,
@@ -423,6 +435,8 @@ def make_gridded_weather_task(
         data_source=data_source,
         start_date=start_date,
         end_date=end_date,
+        val_start_date=val_start_date,
+        val_end_date=val_end_date,
         num_context_frames=num_context_frames,
         num_target_frames=num_target_frames,
         temporal_resolution_hours=temporal_resolution_hours,
@@ -446,26 +460,5 @@ def make_gridded_weather_task(
             trg_variables_to_exclude,
         ),
         norm_path=norm_path,
-    )
-
-
-if __name__ == "__main__":
-    data_source = ZarrDatasource.from_path(
-        "/home/jonas/Documents/code/otter/_data/era5_240x121.zarr"
-    )
-    # TODO
-    norm_path = ""
-
-    task = make_gridded_weather_task(
-        data_source=data_source,
-        start_date=ERA5_START_DATE,
-        end_date=ERA5_END_DATE,
-        num_context_frames=1,
-        num_target_frames=1,
-        temporal_resolution_hours=6,
-        ctx_variables_to_exclude=[],
-        trg_variables_to_exclude=[],
-        split=Split.TRAIN,
-        generator=torch.default_generator,
-        norm_path=norm_path,
+        split=split,
     )

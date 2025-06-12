@@ -7,9 +7,10 @@ model:
     width: 256
     patch_size: 2
     token_dimensions: [256, 256, 256]
+    final_swin_token_dim: 16
     in_channels: ???
     output_dimension: ???
-    window_size: 4
+    window_size: 8
     num_heads: 8
     num_blocks_per_stage: [2, 2]
     feedforward_network:
@@ -21,3 +22,4 @@ model:
       _target_: cdnp.model.swin.embeddings.SpatialEmbedding
       num_scales: 128
       token_dimension: 256
+    pad_dont_interpolate: true

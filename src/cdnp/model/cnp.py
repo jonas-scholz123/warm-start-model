@@ -4,6 +4,7 @@ from torch import nn
 from torch.distributions import Normal
 
 from cdnp.model.ctx import ModelCtx
+from cdnp.model.util import padded_forward
 
 
 class CNP(nn.Module):
@@ -41,7 +42,7 @@ class CNP(nn.Module):
         shape = (im_ctx.shape[0],)
         timesteps = torch.zeros(shape).long().to(self.device)
 
-        pred = self.backbone(im_ctx, timesteps, class_labels=labels).sample
+        pred = padded_forward(self.backbone, im_ctx, timesteps, class_labels=labels)
 
         mean, std = pred.chunk(2, dim=1)
         if self.residual:

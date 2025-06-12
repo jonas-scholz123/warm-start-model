@@ -33,6 +33,7 @@ class SwinTransformer(nn.Module):
     def __init__(
         self,
         token_dimensions: Sequence[int] | int,
+        final_swin_token_dim: int,
         output_dimension: int,
         window_size: int,
         num_heads: int,
@@ -44,7 +45,7 @@ class SwinTransformer(nn.Module):
         feedforward_network: Callable[[int, int], nn.Module],
         pos_embedding: PositionEmbedding | SpatialEmbedding,
         use_efficient_attention: bool = True,
-        pad_dont_interpolate: bool = True,
+        pad_dont_interpolate: bool = False,
     ):
         super().__init__()
 
@@ -125,19 +126,25 @@ class SwinTransformer(nn.Module):
 
         self.embedding = pos_embedding
 
-        # self.final_conv = UpsampleLayer(
-        #    in_channels=token_dimensions[-1],
-        #    out_channels=output_dimension,
-        # )
-
-        self.final_conv = nn.ConvTranspose2d(
+        self.unpatch_conv = nn.ConvTranspose2d(
             in_channels=token_dimensions[-1],
-            out_channels=output_dimension,
+            out_channels=final_swin_token_dim,
             stride=(patch_size, patch_size),
             kernel_size=(patch_size, patch_size),
         )
-        self.final_conv2 = nn.Conv2d(
-            in_channels=output_dimension,
+
+        # At the high res, need bigger window size, which somehow lower memory.
+        self.final_swin_stage = make_swin_stage(
+            token_dim=final_swin_token_dim,
+            feedforward_network=feedforward_network,
+            num_heads=num_heads,
+            num_swin_blocks=1,
+            window_size=2 * window_size,
+            use_efficient_attention=use_efficient_attention,
+        )
+
+        self.final_conv = nn.Conv2d(
+            in_channels=final_swin_token_dim,
             out_channels=output_dimension,
             kernel_size=3,
             stride=1,
@@ -169,11 +176,7 @@ class SwinTransformer(nn.Module):
         # which is the Otter convention
         x = x.permute(0, 2, 3, 1)
 
-        x = make_debug_input(x)
-
         _, original_height, original_width, _ = x.shape
-
-        self.debug_plot(x)
 
         if self.pad_dont_interpolate:
             # Pad input to target dimensions
@@ -183,14 +186,8 @@ class SwinTransformer(nn.Module):
                 x, height=self.height, width=self.width
             )
 
-        self.debug_plot(x)
-        x = make_debug_input(x)
-        self.debug_plot(x)
-        # print("Tokenisation, ", self.plot_count)
         x = self.tokeniser(x)
-        self.debug_plot(x)
         x = self.embedding(x)
-        self.debug_plot(x)
 
         skips = []
 
@@ -200,12 +197,8 @@ class SwinTransformer(nn.Module):
         ):
             skips.append(x)
             x = self.apply_geoconv(downsampling_conv, x)
-            self.debug_plot(x)
             for swin_transformer_block in down_swin_stage:
                 x, _ = swin_transformer_block(x)
-                self.debug_plot(x)
-
-        # print("All the way down", self.plot_count)
 
         for upsampling_conv, up_swin_stage, skip in zip(
             self.patch_upsampling_layers,
@@ -214,20 +207,14 @@ class SwinTransformer(nn.Module):
         ):
             for swin_transformer_block in up_swin_stage:
                 x, _ = swin_transformer_block(x)
-
-            # print("Upsampling", self.plot_count)
-            x = make_debug_input(x)
             x = self.apply_geoupsample(upsampling_conv, x)
-            self.debug_plot(x)
             x = x + skip
-            self.debug_plot(x)
 
-        x = make_debug_input(x)
-        x = self.apply_geoupsample(self.final_conv, x)
-        self.debug_plot(x)
-        x = make_debug_input(x)
-        self.debug_plot(x)
-        x = self.apply_geoconv(self.final_conv2, x)
+        x = self.apply_geoconv(self.unpatch_conv, x)
+        for swin_transformer_block in self.final_swin_stage:
+            x, _ = swin_transformer_block(x)
+        x = self.apply_geoconv(self.final_conv, x)
+
         self.debug_plot(x)
 
         if self.pad_dont_interpolate:
@@ -245,11 +232,7 @@ class SwinTransformer(nn.Module):
         return UNet2DOutput(sample=x)
 
     def apply_geoconv_old(self, conv_layer: nn.Module, x: torch.Tensor) -> torch.Tensor:
-        # print("GEOCONV")
-        print(x.shape)
         x = x.permute(0, 3, 1, 2)
-        print(x.shape)
-
         k_lat, k_lon = conv_layer.kernel_size  # ty: ignore
         pad_lat = k_lat - 1
         pad_lon = k_lon - 1
@@ -259,7 +242,6 @@ class SwinTransformer(nn.Module):
         pad_lon_left = pad_lon // 2
         pad_lon_right = pad_lon - pad_lon_left
 
-        print(self.plot_count)
         self.debug_plot(x.permute(0, 2, 3, 1))
 
         if pad_lon > 0:
@@ -275,7 +257,6 @@ class SwinTransformer(nn.Module):
             x_padded_lon = x
 
         self.debug_plot(x_padded_lon.permute(0, 2, 3, 1))
-        print(f"Padding lat: {pad_lat}, lon: {pad_lon}")
         # print(f"{x_padded_lon.shape=}")
         if pad_lat > 0:
             x_padded = F.pad(
@@ -286,17 +267,14 @@ class SwinTransformer(nn.Module):
             )
         else:
             x_padded = x_padded_lon
-        # print(x_padded.shape)
 
         # The provided conv_layer must have padding=0
         self.debug_plot(x_padded.permute(0, 2, 3, 1))
         output = conv_layer(x_padded)
-        # print(output.shape)
 
         return output.permute(0, 2, 3, 1)
 
     def apply_geoconv2(self, conv_layer: nn.Module, x: torch.Tensor) -> torch.Tensor:
-        # print(x.shape)
         x = x.permute(0, 3, 1, 2)
 
         k_lat, k_lon = conv_layer.kernel_size  # ty: ignore
@@ -309,7 +287,6 @@ class SwinTransformer(nn.Module):
         pad_lon_left = (k_lon - 1) // 2 + (k_lon % 2 == 0)
         pad_lon_right = (k_lon - 1) // 2
 
-        # print(f"Padding lat: {pad_lat_top} + {pad_lat_bottom}")
         print(f"Padding lon: {pad_lon_left} + {pad_lon_right}")
 
         # Apply longitude padding (circular)
@@ -339,7 +316,6 @@ class SwinTransformer(nn.Module):
         self, upsampling_layer: nn.Module, x: torch.Tensor
     ) -> torch.Tensor:
         x = x.permute(0, 3, 1, 2)
-        print("GEOUPSAMPLE", self.plot_count)
         self.debug_plot(x.permute(0, 2, 3, 1))
         target_lat = x.shape[2] * upsampling_layer.stride[0]  # ty: ignore
         target_lon = x.shape[3] * upsampling_layer.stride[1]  # ty: ignore
