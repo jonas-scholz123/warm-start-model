@@ -56,6 +56,7 @@ class GeoPlotter:
         colorbar_label: str = "",
         vmin: Optional[float] = None,
         vmax: Optional[float] = None,
+        show_cbar: bool = True,
     ) -> Figure:
         """
         Plots a 2D PyTorch tensor representing data on a latitude-longitude grid,
@@ -95,14 +96,16 @@ class GeoPlotter:
         mappable.set_array(data_np)
         mappable.set_clim(vmin, vmax)
 
-        cbar = plt.colorbar(
-            mappable,
-            ax=ax,
-            orientation="vertical",
-            pad=0.05,
-            shrink=0.8,
-        )
-        cbar.set_label(colorbar_label)
+        if show_cbar:
+            cbar = plt.colorbar(
+                mappable,
+                ax=ax,
+                orientation="vertical",
+                pad=0.05,
+                shrink=0.8,
+            )
+            cbar.set_label(colorbar_label)
+
         ax.set_title(title)
 
         return fig

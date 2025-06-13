@@ -84,22 +84,26 @@ class CDNP(nn.Module):
         """
 
         # TODO: num samples: extend along batch dimension
+        cnp_dist = self.cnp.predict(ctx)
+        cnp_dist = Normal(cnp_dist.mean, cnp_dist.stddev * self.std_mult)
+        mean = cnp_dist.mean
+        std = cnp_dist.stddev
 
-        prd_dist = self.cnp.predict(ctx)
-        prd_dist = Normal(prd_dist.mean, prd_dist.stddev * self.std_mult)
-        labels = ctx.label_ctx
-
-        x_t = prd_dist.sample()
+        x = cnp_dist.sample()
 
         for t in self.noise_scheduler.timesteps:
-            model_input = self._cat_ctx(x_t, ctx)
-            prd_eps = self.backbone(model_input, t, labels).sample
-            # Update sample with step
+            model_input = self._cat_ctx(x, ctx)
 
-            x_t = self.noise_scheduler.step(
-                prd_eps, t, x_t, x_T_mean=prd_dist.mean, x_T_std=prd_dist.stddev
-            ).prev_sample
-        return x_t
+            model_input = torch.cat([model_input, mean, std], dim=1)
+
+            prd_noise = padded_forward(
+                self.backbone, model_input, t, class_labels=ctx.label_ctx
+            )
+
+            out = self.noise_scheduler.step(prd_noise, t, x, x_T_mean=mean, x_T_std=std)
+
+            x = out.prev_sample
+        return x
 
     @torch.no_grad()
     def make_plot(self, ctx: ModelCtx, num_samples: int = 0) -> list[torch.Tensor]:
@@ -125,6 +129,7 @@ class CDNP(nn.Module):
 
             x = out.prev_sample
         plots.append(x)
+        plots = [p[:, -1:, :, :] for p in plots]  # Take only the last channel for plots
 
         return plots
 
