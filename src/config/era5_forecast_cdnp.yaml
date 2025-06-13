@@ -1,0 +1,29 @@
+defaults:
+  - base
+  - data: era5
+  - task: forecast
+  - model: cdnp
+  - model/backbone: big_no_attention
+  - _self_
+
+model:
+  initial_std_mult: 20.0
+  cnp:
+    _target_: cdnp.util.instantiate.load_model_from_path
+    path: ${paths.weights}/2025-06-10_12-53_lucky_kangaroo
+    freeze: true # Freeze the trained CNP
+  backbone:
+    in_channels: 42 # 2 context times * 1 variables + 5 static + 32 time embeds + CNP mean, std, sample
+    out_channels: 1 # T2M predicted noise
+  
+execution:
+  epochs: 100
+
+data:
+  trainloader:
+    batch_size: 4
+  testloader:
+    batch_size: 8
+
+optimizer:
+  lr: 1e-4

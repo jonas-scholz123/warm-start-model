@@ -29,24 +29,15 @@ class Paths:
 
 
 @dataclass
-class DatasetConfig:
-    paths: Paths
-    val_fraction: float
-    norm_means: tuple[float, ...]
-    norm_stds: tuple[float, ...]
-    _target_: str
-    _partial_: bool
-
-
-@dataclass
 class DataConfig:
     cache: bool
     in_channels: int
     num_classes: Optional[int]
-    sidelength: int
+    width: int
+    height: int
     trainloader: dict
     testloader: dict
-    dataset: DatasetConfig
+    dataset: dict
     preprocess_fn: dict
 
 

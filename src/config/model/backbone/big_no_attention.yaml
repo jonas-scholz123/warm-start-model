@@ -1,6 +1,7 @@
 # @package _global_
 
 model:
+  # TODO: backbone here is too restrictive
   backbone:
     _target_: diffusers.UNet2DModel
     sample_size:
@@ -10,12 +11,14 @@ model:
     out_channels: ${data.in_channels}
     layers_per_block: 2
     resnet_time_scale_shift: "scale_shift"
-    block_out_channels: [64, 128, 256]
+    block_out_channels: [128, 256, 512, 512]
     down_block_types:
       - DownBlock2D
-      - AttnDownBlock2D
-      - AttnDownBlock2D
+      - DownBlock2D
+      - DownBlock2D
+      - DownBlock2D
     up_block_types:
-      - AttnUpBlock2D
-      - AttnUpBlock2D
+      - UpBlock2D
+      - UpBlock2D
+      - UpBlock2D
       - UpBlock2D

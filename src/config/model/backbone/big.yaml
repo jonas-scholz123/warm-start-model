@@ -3,6 +3,14 @@
 model:
   # TODO: backbone here is too restrictive
   backbone:
+    _target_: diffusers.UNet2DModel
+    sample_size:
+      - ${data.height}
+      - ${data.width}
+    in_channels: ${data.in_channels}
+    out_channels: ${data.in_channels}
+    layers_per_block: 2
+    resnet_time_scale_shift: "scale_shift"
     block_out_channels: [128, 256, 512, 512]
     down_block_types:
       - DownBlock2D

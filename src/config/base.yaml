@@ -45,13 +45,6 @@ rng:
 
 model:
   device: ${runtime.device}
-  backbone:
-    _target_: diffusers.UNet2DModel
-    sample_size: ${data.sidelength}
-    in_channels: ${data.in_channels}
-    out_channels: ${data.in_channels}
-    layers_per_block: 2
-    resnet_time_scale_shift: "scale_shift"
 
 optimizer:
   _target_: torch.optim.AdamW
@@ -66,9 +59,6 @@ scheduler:
   total_iters: ${execution.epochs}
 
 data:
-  dataset:
-    paths: ${paths}
-    val_fraction: 0.1
   cache: false
   trainloader:
     _target_: torch.utils.data.DataLoader

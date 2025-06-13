@@ -1,0 +1,14 @@
+# @package _global_
+
+data:
+  preprocess_fn:
+    _target_: cdnp.task.preprocess_weather_forecast
+    _partial_: true
+
+output:
+  plotter:
+    _target_: cdnp.plot.plotter.ForecastPlotter
+    _partial_: true
+    device: ${runtime.device}
+    num_samples: 4
+    preprocess_fn: ${data.preprocess_fn}

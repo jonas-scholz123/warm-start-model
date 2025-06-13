@@ -1,0 +1,29 @@
+defaults:
+  - base
+  - data: era5_wind
+  - task: forecast
+  - model: cdnp
+  - model/backbone: big_no_attention
+  - _self_
+
+model:
+  initial_std_mult: 20.0
+  cnp:
+    _target_: cdnp.util.instantiate.load_model_from_path
+    path: ${paths.weights}/2025-06-12_18-05_intelligent_dog
+    freeze: true # Freeze the trained CNP
+  backbone:
+    in_channels: 47 # 2 context times * 2 variables + 5 static + 32 time embeds + 2 * CNP mean, std, sample
+    out_channels: 2 # U/V @ 10m predicted noise
+  
+execution:
+  epochs: 100
+
+data:
+  trainloader:
+    batch_size: 4
+  testloader:
+    batch_size: 8
+
+optimizer:
+  lr: 1e-4

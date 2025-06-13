@@ -21,6 +21,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cdnp.evaluate import evaluate
+from cdnp.model.cdnp import CDNP
 from cdnp.plot.plotter import CcgenPlotter
 from cdnp.task import PreprocessFn
 from cdnp.util.instantiate import Experiment
@@ -37,21 +38,17 @@ TaskType = tuple[torch.Tensor, torch.Tensor]
 
 @hydra.main(version_base=None, config_name="base", config_path="../config")
 def main(cfg: Config) -> float:
-    try:
-        _configure_outputs()
+    _configure_outputs()
 
-        logger.debug(OmegaConf.to_yaml(cfg))
+    logger.debug(OmegaConf.to_yaml(cfg))
 
-        seed_everything(cfg.execution.seed)
+    seed_everything(cfg.execution.seed)
 
-        trainer = Trainer.from_config(cfg)
-        trainer.train_loop()
-        if cfg.output.use_wandb:
-            wandb.finish()
-        return trainer.state.best_val_loss
-    except Exception as e:
-        logger.exception("An error occurred during training: {}", e)
-        raise e
+    trainer = Trainer.from_config(cfg)
+    trainer.train_loop()
+    if cfg.output.use_wandb:
+        wandb.finish()
+    return trainer.state.best_val_loss
 
 
 def _configure_outputs():
@@ -236,6 +233,8 @@ class Trainer:
 
     def train_epoch(self) -> None:
         self.model.train()
+        if isinstance(self.model, CDNP):
+            self.model.set_steps(self.state.step)
         device = next(self.model.parameters()).device
         train_loader: tqdm[TaskType] = tqdm(
             self.train_loader, disable=not self.cfg.output.use_tqdm

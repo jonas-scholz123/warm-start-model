@@ -1,0 +1,26 @@
+defaults:
+  - base
+  - data: era5_wind
+  - task: forecast
+  - model: cnp
+  - model/backbone: big_no_attention
+  - _self_
+
+model:
+  residual: true
+  backbone:
+    in_channels: 41 # 2 context times * 2 variables + 5 static + 32 time embeds
+    out_channels: 4 # T2M mean and std * 2 trg variables
+  min_std: 0.05
+  
+execution:
+  epochs: 100
+
+data:
+  trainloader:
+    batch_size: 4
+  testloader:
+    batch_size: 8
+
+optimizer:
+  lr: 1e-4
