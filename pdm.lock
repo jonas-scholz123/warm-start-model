@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:4b473fe92a79e22fdffd62e3de94f8301e4dd5c0a0e417729d42ce84968e7d22"
+content_hash = "sha256:796fb3e519197bce73f00bc6cae20f11a5f9adbff740bb6986209c64c3f5e2d6"
 
 [[metadata.targets]]
 requires_python = ">=3.11.0"
@@ -2562,6 +2562,18 @@ files = [
     {file = "torch-2.7.0-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:176300ff5bc11a5f5b0784e40bde9e10a35c4ae9609beed96b4aeb46a27f5fae"},
     {file = "torch-2.7.0-cp313-cp313t-win_amd64.whl", hash = "sha256:d0ca446a93f474985d81dc866fcc8dccefb9460a29a456f79d99c29a78a66993"},
     {file = "torch-2.7.0-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:27f5007bdf45f7bb7af7f11d1828d5c2487e030690afb3d89a651fd7036a390e"},
+]
+
+[[package]]
+name = "torcheval"
+version = "0.0.7"
+summary = ""
+dependencies = [
+    "typing-extensions",
+]
+files = [
+    {file = "torcheval-0.0.7-py3-none-any.whl", hash = "sha256:20cc34dac7aa9b32f942c8a9f014d1d02098631b6cd0b102c078600577017956"},
+    {file = "torcheval-0.0.7.tar.gz", hash = "sha256:a498dec34137bc66c9cf1adc7353a46c604dd62255884c72dcb4e2e4fc2cd7e9"},
 ]
 
 [[package]]
