@@ -17,5 +17,5 @@ data:
     _partial_: true
     # TODO: this should be a singleton, injected in Experiment.from_config
     gen: ${rng.cpu_generator}
-    min_frac: 0.2
-    max_frac: 0.7
+    min_frac: 0.01
+    max_frac: 0.1

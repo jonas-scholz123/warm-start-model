@@ -1,0 +1,21 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: inpaint
+  - model: cdnp
+  - model/backbone: small
+  - _self_
+
+model:
+  cnp:
+    _target_: cdnp.util.instantiate.load_model_from_path
+    path: ${paths.weights}/2025-06-02_17-19_kind_bear
+    freeze: true # Freeze the trained CNP
+  backbone:
+    in_channels: 7 # noised RGB image + masked RGB input + mask
+    out_channels: 3 # RGB image
+
+
+  
+execution:
+  epochs: 20

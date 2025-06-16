@@ -90,9 +90,11 @@ class Trainer:
         plotter: Optional[CcgenPlotter],
         preprocess_fn: PreprocessFn,
         metrics: list[Metric],
+        ema_model: Optional[nn.Module],
     ):
         self.cfg = cfg
         self.model = model
+        self.ema_model = ema_model
         self.optimizer = optimizer
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -187,6 +189,7 @@ class Trainer:
             exp.plotter,
             exp.preprocess_fn,
             exp.metrics,
+            exp.ema_model,
         )
 
     def train_loop(self):
@@ -205,18 +208,7 @@ class Trainer:
         if self.plotter:
             self.plotter.plot_prediction(self.model, s.epoch)
 
-        val_metrics = evaluate(
-            self.model,
-            self.val_loader,
-            self.preprocess_fn,
-            self.metrics,
-            self.cfg.execution.dry_run,
-        )
-        self.metric_logger.log(val_metrics, prefix="val")
-
-        while s.epoch <= self.cfg.execution.epochs:
-            logger.info("Starting epoch {} / {}", s.epoch, self.cfg.execution.epochs)
-            self.train_epoch()
+        with self.ema_model:
             val_metrics = evaluate(
                 self.model,
                 self.val_loader,
@@ -224,6 +216,22 @@ class Trainer:
                 self.metrics,
                 self.cfg.execution.dry_run,
             )
+        self.metric_logger.log(val_metrics, prefix="val")
+
+        while s.epoch <= self.cfg.execution.epochs:
+            logger.info("Starting epoch {} / {}", s.epoch, self.cfg.execution.epochs)
+            self.train_epoch()
+            with self.ema_model:
+                if self.plotter:
+                    self.plotter.plot_prediction(self.model, s.epoch)
+
+                val_metrics = evaluate(
+                    self.model,
+                    self.val_loader,
+                    self.preprocess_fn,
+                    self.metrics,
+                    self.cfg.execution.dry_run,
+                )
             self.metric_logger.log(val_metrics, prefix="val")
 
             s.val_loss = val_metrics["loss"]
@@ -237,9 +245,6 @@ class Trainer:
 
             if self.scheduler:
                 self.scheduler.step()
-
-            if self.plotter:
-                self.plotter.plot_prediction(self.model, s.epoch)
 
             s.epoch += 1
             s.best_val_loss = s.best_val_loss
@@ -293,6 +298,10 @@ class Trainer:
                 self.optimizer.zero_grad()
                 self.grad_scaler.update()
                 self.metric_logger.log({"lr": self.scheduler.get_last_lr()[0]})
+
+            if self.ema_model:
+                with p.profile("ema.update"):
+                    self.ema_model.update()
 
             self.state.step += 1
 

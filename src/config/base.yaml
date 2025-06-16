@@ -24,6 +24,7 @@ execution:
   gradient_clip_norm: 0.0
   start_from: LATEST
   start_weights: null
+  ema_rate: 0.0
 
 output:
   save_checkpoints: true

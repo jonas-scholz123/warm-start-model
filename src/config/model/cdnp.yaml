@@ -1,9 +1,15 @@
-_target_: cdnp.model.cdnp.CDNP
-noise_scheduler:
-  _target_: cdnp.model.noise_scheduler.CDNPScheduler
-  num_train_timesteps: 10
-  beta_start: 0.0001
-  beta_end: 0.5
-  beta_schedule: "linear"
-  clip_sample: false
-cnp: ???
+# @package _global_
+
+model:
+  _target_: cdnp.model.cdnp.CDNP
+  noise_scheduler:
+    _target_: cdnp.model.noise_scheduler.CDNPScheduler
+    num_train_timesteps: 10
+    beta_start: 0.0001
+    beta_end: 0.5
+    beta_schedule: "linear"
+    clip_sample: false
+  cnp: ???
+
+execution:
+  ema_rate: 0.9999
