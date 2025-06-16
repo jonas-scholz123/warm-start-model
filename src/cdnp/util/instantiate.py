@@ -15,6 +15,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 
 from cdnp.data.data import make_dataset
+from cdnp.evaluate import Metric
 from cdnp.model.ddpm import ModelCtx
 from cdnp.plot.plotter import CcgenPlotter
 from config.config import Config, init_configs
@@ -33,6 +34,7 @@ class Experiment:
     checkpoint_manager: CheckpointManager
     plotter: Optional[CcgenPlotter]
     preprocess_fn: Callable[[Any], ModelCtx]
+    metrics: list[Metric]
 
     @staticmethod
     def from_config(cfg: Config) -> "Experiment":
@@ -89,6 +91,7 @@ class Experiment:
             checkpoint_manager=checkpoint_manager,
             plotter=plotter,
             preprocess_fn=exp.data.preprocess_fn,
+            metrics=exp.output.metrics,
         )
 
 
