@@ -1,34 +1,115 @@
+from abc import ABC, abstractmethod
+
 import torch
-from torch import nn
 from torch.amp import autocast
 from torch.utils.data.dataloader import DataLoader
+from torcheval.metrics import FrechetInceptionDistance
 
-from cdnp.task import PreprocessFn
+from cdnp.model.cdnp import CDNP
+from cdnp.model.cnp import CNP
+from cdnp.model.ddpm import DDPM
+from cdnp.task import ModelCtx, PreprocessFn
+
+
+def unnormalise(x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
+    x = x * std + mean
+    return x.clamp(0, 1)
+
+
+class Metric(ABC):
+    @abstractmethod
+    def update(
+        self, model: CDNP | DDPM | CNP, ctx: ModelCtx, trg: torch.Tensor
+    ) -> None:
+        pass
+
+    @abstractmethod
+    def compute(self) -> float:
+        pass
+
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+
+class LossMetric(Metric):
+    def __init__(self):
+        self.loss = 0.0
+        self.count = 0
+
+    def update(
+        self, model: CDNP | DDPM | CNP, ctx: ModelCtx, trg: torch.Tensor
+    ) -> None:
+        self.loss += model(ctx, trg).item()
+        self.count += 1
+
+    def compute(self) -> float:
+        result = self.loss / self.count
+        self.loss = 0.0
+        self.count = 0
+        return result
+
+    def name(self) -> str:
+        return "loss"
+
+
+class FIDMetric(Metric):
+    def __init__(
+        self, num_samples: int, means: list[int], stds: list[int], device: str
+    ):
+        self.fid = FrechetInceptionDistance(feature_dim=2048).to(device)
+        self.num_samples = num_samples
+        self.count = 0
+        self.device = device
+        self.means = torch.tensor(means).view(1, 3, 1, 1).to(device)
+        self.stds = torch.tensor(stds).view(1, 3, 1, 1).to(device)
+
+    def update(
+        self, model: CDNP | DDPM | CNP, ctx: ModelCtx, trg: torch.Tensor
+    ) -> None:
+        if self.count > self.num_samples:
+            return
+
+        fake_images = model.sample(ctx, num_samples=1)
+        fake_images = unnormalise(fake_images, self.means, self.stds)
+        self.fid.update(fake_images, is_real=False)
+
+        real_images = unnormalise(trg, self.means, self.stds)
+        self.fid.update(real_images, is_real=True)
+        self.count += real_images.shape[0]
+
+    def compute(self) -> float:
+        result = self.fid.compute().item()
+        self.fid.reset()
+        self.count = 0
+        return result
+
+    def name(self) -> str:
+        return "fid"
 
 
 @torch.no_grad()
 def evaluate(
-    model: nn.Module,
-    val_loader: DataLoader,
+    model: CDNP | DDPM | CNP,
+    dataloader: DataLoader,
     preprocess_fn: PreprocessFn,
+    metrics: list[Metric],
     dry_run: bool = False,
 ) -> dict[str, float]:
     model.eval()
-    val_loss = 0
     device = next(model.parameters()).device
-    num_batches = 0
 
+    # TODO: make sure we don't repeat forward passes
     with autocast(device_type=device.type, dtype=torch.float16):
-        for batch in val_loader:
+        for batch in dataloader:
             ctx, trg = preprocess_fn(batch)
             ctx = ctx.to(device)
             trg = trg.to(device)
-            val_loss += model(ctx, trg).item()
-            num_batches += 1
+
+            for metric in metrics:
+                metric.update(model, ctx, trg)
 
             if dry_run:
                 break
 
-    val_loss /= num_batches
-
-    return {"val_loss": val_loss}
+    return {metric.name(): metric.compute() for metric in metrics}

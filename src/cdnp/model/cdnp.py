@@ -129,7 +129,6 @@ class CDNP(nn.Module):
 
             x = out.prev_sample
         plots.append(x)
-        plots = [p[:, -1:, :, :] for p in plots]  # Take only the last channel for plots
 
         return plots
 

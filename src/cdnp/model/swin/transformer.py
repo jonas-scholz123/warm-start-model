@@ -249,7 +249,6 @@ class SwinTransformer(nn.Module):
                 raise ValueError(
                     "Longitude padding must be at least 1 pixel on both sides."
                 )
-            # print(pad_lon_left, pad_lon_right)
             x_padded_lon = torch.cat(
                 [x[..., -pad_lon_left:], x, x[..., :pad_lon_right]], dim=3
             )
@@ -257,7 +256,6 @@ class SwinTransformer(nn.Module):
             x_padded_lon = x
 
         self.debug_plot(x_padded_lon.permute(0, 2, 3, 1))
-        # print(f"{x_padded_lon.shape=}")
         if pad_lat > 0:
             x_padded = F.pad(
                 x_padded_lon,
@@ -286,8 +284,6 @@ class SwinTransformer(nn.Module):
 
         pad_lon_left = (k_lon - 1) // 2 + (k_lon % 2 == 0)
         pad_lon_right = (k_lon - 1) // 2
-
-        print(f"Padding lon: {pad_lon_left} + {pad_lon_right}")
 
         # Apply longitude padding (circular)
         if pad_lon_left > 0 or pad_lon_right > 0:

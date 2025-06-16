@@ -66,6 +66,7 @@ class OutputConfig:
     gradient_log_freq: int
     use_tqdm: bool
     log_level: str
+    metrics: list[str]
     plotter: Optional[dict]
 
 

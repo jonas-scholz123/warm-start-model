@@ -9,20 +9,25 @@ defaults:
 model:
   cnp:
     _target_: cdnp.util.instantiate.load_model_from_path
-    # this is for default fraction
-    #path: ${paths.weights}/2025-06-02_18-16_delightful_rabbit
-    # This is for 0.01-0.1 fraction
-    path: ${paths.weights}/2025-06-02_20-40_lucky_xenon
+    path: ${paths.weights}/celeba_cnp
     freeze: true # Freeze the trained CNP
   backbone:
     in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
     out_channels: 3 # RGB image
   
 execution:
-  epochs: 20
+  epochs: 100
 
 data:
   preprocess_fn:
     min_frac: 0.01
     max_frac: 0.1
- 
+  
+output:
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.FIDMetric      
+      num_samples: 5000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}

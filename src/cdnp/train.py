@@ -1,5 +1,5 @@
 import warnings
-from typing import Optional
+from typing import Callable, Optional
 
 import hydra
 import numpy as np
@@ -20,7 +20,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from cdnp.evaluate import evaluate
+from cdnp.evaluate import Metric, evaluate
 from cdnp.model.cdnp import CDNP
 from cdnp.plot.plotter import CcgenPlotter
 from cdnp.task import PreprocessFn
@@ -74,6 +74,7 @@ class Trainer:
     plotter: Optional[CcgenPlotter]
     state: TrainerState
     preprocess_fn: PreprocessFn
+    metrics: list[Callable]
 
     def __init__(
         self,
@@ -88,6 +89,7 @@ class Trainer:
         scheduler: Optional[LRScheduler],
         plotter: Optional[CcgenPlotter],
         preprocess_fn: PreprocessFn,
+        metrics: list[Metric],
     ):
         self.cfg = cfg
         self.model = model
@@ -100,6 +102,7 @@ class Trainer:
         self.scheduler = scheduler
         self.plotter = plotter
         self.preprocess_fn = preprocess_fn
+        self.metrics = metrics
         self.grad_scaler = GradScaler()
 
         self.state = self._load_initial_state()
@@ -183,6 +186,7 @@ class Trainer:
             exp.scheduler,
             exp.plotter,
             exp.preprocess_fn,
+            exp.metrics,
         )
 
     def train_loop(self):
@@ -201,13 +205,28 @@ class Trainer:
         if self.plotter:
             self.plotter.plot_prediction(self.model, s.epoch)
 
+        val_metrics = evaluate(
+            self.model,
+            self.val_loader,
+            self.preprocess_fn,
+            self.metrics,
+            self.cfg.execution.dry_run,
+        )
+        self.metric_logger.log(val_metrics, prefix="val")
+
         while s.epoch <= self.cfg.execution.epochs:
             logger.info("Starting epoch {} / {}", s.epoch, self.cfg.execution.epochs)
             self.train_epoch()
-            val_metrics = self.val_epoch()
-            self.metric_logger.log(val_metrics)
+            val_metrics = evaluate(
+                self.model,
+                self.val_loader,
+                self.preprocess_fn,
+                self.metrics,
+                self.cfg.execution.dry_run,
+            )
+            self.metric_logger.log(val_metrics, prefix="val")
 
-            s.val_loss = val_metrics["val_loss"]
+            s.val_loss = val_metrics["loss"]
 
             self.save_checkpoint(CheckpointOccasion.LATEST)
 
@@ -259,7 +278,7 @@ class Trainer:
 
             with p.profile("backward"):
                 self.grad_scaler.scale(loss).backward()
-                self.metric_logger.log({"train_loss": loss.item()})
+                self.metric_logger.log({"loss": loss.item()}, prefix="train")
 
             with p.profile("optimizer.step"):
                 clip_norm: float = self.cfg.execution.gradient_clip_norm
@@ -268,11 +287,12 @@ class Trainer:
                     grad_norm = nn.utils.clip_grad_norm_(
                         self.model.parameters(), clip_norm
                     )
-                    self.metric_logger.log({"misc/grad_norm": grad_norm})
+                    self.metric_logger.log({"grad_norm": grad_norm})
 
                 self.grad_scaler.step(self.optimizer)
                 self.optimizer.zero_grad()
                 self.grad_scaler.update()
+                self.metric_logger.log({"lr": self.scheduler.get_last_lr()[0]})
 
             self.state.step += 1
 
@@ -289,14 +309,6 @@ class Trainer:
                 self.scheduler,
                 self.state,
             )
-
-    def val_epoch(self) -> dict[str, float]:
-        return evaluate(
-            self.model,
-            self.val_loader,
-            self.preprocess_fn,
-            self.cfg.execution.dry_run,
-        )
 
 
 if __name__ == "__main__":

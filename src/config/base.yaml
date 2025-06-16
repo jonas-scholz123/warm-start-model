@@ -33,6 +33,8 @@ output:
   gradient_log_freq: 100
   use_tqdm: true
   log_level: INFO
+  metrics: 
+    - _target_: cdnp.evaluate.LossMetric
 
 rng:
   generator:
