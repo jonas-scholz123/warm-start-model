@@ -52,6 +52,7 @@ class ExecutionConfig:
     epochs: int
     seed: int
     gradient_clip_norm: float
+    ema_rate: float
     start_from: Optional[CheckpointOccasion]
     start_weights: Optional[str]
 

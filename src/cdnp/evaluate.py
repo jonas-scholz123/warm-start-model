@@ -70,7 +70,8 @@ class FIDMetric(Metric):
         if self.count > self.num_samples:
             return
 
-        fake_images = model.sample(ctx, num_samples=1)
+        num_samples = trg.shape[0]
+        fake_images = model.sample(ctx, num_samples=num_samples)
         fake_images = unnormalise(fake_images, self.means, self.stds)
         self.fid.update(fake_images, is_real=False)
 

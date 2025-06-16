@@ -17,6 +17,7 @@ from torch.utils.data import DataLoader
 from cdnp.data.data import make_dataset
 from cdnp.evaluate import Metric
 from cdnp.model.ddpm import ModelCtx
+from cdnp.model.ema import ExponentialMovingAverage
 from cdnp.plot.plotter import CcgenPlotter
 from config.config import Config, init_configs
 
@@ -35,6 +36,7 @@ class Experiment:
     plotter: Optional[CcgenPlotter]
     preprocess_fn: Callable[[Any], ModelCtx]
     metrics: list[Metric]
+    ema_model: Optional[ExponentialMovingAverage] = None
 
     @staticmethod
     def from_config(cfg: Config) -> "Experiment":
@@ -61,6 +63,11 @@ class Experiment:
         model: Module = exp.model.to(cfg.runtime.device)
         _log_num_params(model)
         optimizer = exp.optimizer(model.parameters())
+
+        if exp.execution.ema_rate > 0:
+            ema_model = ExponentialMovingAverage(model, exp.execution.ema_rate)
+        else:
+            ema_model = None
 
         scheduler: Optional[LRScheduler] = (
             exp.scheduler(optimizer) if exp.scheduler else None
@@ -92,6 +99,7 @@ class Experiment:
             plotter=plotter,
             preprocess_fn=exp.data.preprocess_fn,
             metrics=exp.output.metrics,
+            ema_model=ema_model,
         )
 
 
