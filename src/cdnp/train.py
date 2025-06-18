@@ -22,6 +22,7 @@ from tqdm import tqdm
 
 from cdnp.evaluate import Metric, evaluate
 from cdnp.model.cdnp import CDNP
+from cdnp.model.ema import ExponentialMovingAverage
 from cdnp.plot.plotter import CcgenPlotter
 from cdnp.task import PreprocessFn
 from cdnp.util.instantiate import Experiment
@@ -90,11 +91,12 @@ class Trainer:
         plotter: Optional[CcgenPlotter],
         preprocess_fn: PreprocessFn,
         metrics: list[Metric],
-        ema_model: Optional[nn.Module],
+        ema: Optional[ExponentialMovingAverage],
     ):
         self.cfg = cfg
-        self.model = model
-        self.ema_model = ema_model
+        self.train_model = model
+        self.ema = ema
+        self.inference_model = ema.get_shadow() if ema else model
         self.optimizer = optimizer
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -126,7 +128,7 @@ class Trainer:
         weights_name = self.cfg.execution.start_weights
         if weights_name:
             weights_path = self.cfg.paths.weights / weights_name
-            CheckpointManager.reproduce_model_from_path(self.model, weights_path)
+            CheckpointManager.reproduce_model_from_path(self.train_model, weights_path)
             logger.info(
                 "Pretrained model loaded from path {}, starting from pretrained.",
                 weights_path,
@@ -134,12 +136,21 @@ class Trainer:
         elif start_from and self.checkpoint_manager.checkpoint_exists(start_from.value):
             self.checkpoint_manager.reproduce(
                 start_from.value,
-                self.model,
+                self.train_model,
                 self.optimizer,
                 self.generator,
                 self.scheduler,
                 initial_state,
             )
+            if self.ema:
+                self.checkpoint_manager.reproduce(
+                    start_from.value + "_ema",
+                    self.ema.get_shadow(),
+                    self.optimizer,
+                    self.generator,
+                    self.scheduler,
+                    initial_state,
+                )
 
             logger.info(
                 "Checkpoint loaded, val loss: {}, epoch: {}, step: {}",
@@ -198,7 +209,7 @@ class Trainer:
 
         if self.cfg.output.use_wandb and self.cfg.output.log_gradients:
             wandb.watch(
-                self.model,
+                self.train_model,
                 log="all",
                 log_freq=self.cfg.output.gradient_log_freq,
             )
@@ -206,32 +217,30 @@ class Trainer:
         logger.info("Starting training")
 
         if self.plotter:
-            self.plotter.plot_prediction(self.model, s.epoch)
+            self.plotter.plot_prediction(self.train_model, s.epoch)
 
-        with self.ema_model:
-            val_metrics = evaluate(
-                self.model,
-                self.val_loader,
-                self.preprocess_fn,
-                self.metrics,
-                self.cfg.execution.dry_run,
-            )
+        val_metrics = evaluate(
+            self.inference_model,
+            self.val_loader,
+            self.preprocess_fn,
+            self.metrics,
+            self.cfg.execution.dry_run,
+        )
         self.metric_logger.log(val_metrics, prefix="val")
 
         while s.epoch <= self.cfg.execution.epochs:
             logger.info("Starting epoch {} / {}", s.epoch, self.cfg.execution.epochs)
             self.train_epoch()
-            with self.ema_model:
-                if self.plotter:
-                    self.plotter.plot_prediction(self.model, s.epoch)
+            if self.plotter:
+                self.plotter.plot_prediction(self.inference_model, s.epoch)
 
-                val_metrics = evaluate(
-                    self.model,
-                    self.val_loader,
-                    self.preprocess_fn,
-                    self.metrics,
-                    self.cfg.execution.dry_run,
-                )
+            val_metrics = evaluate(
+                self.inference_model,
+                self.val_loader,
+                self.preprocess_fn,
+                self.metrics,
+                self.cfg.execution.dry_run,
+            )
             self.metric_logger.log(val_metrics, prefix="val")
 
             s.val_loss = val_metrics["loss"]
@@ -256,10 +265,10 @@ class Trainer:
             f.write(OmegaConf.to_yaml(self.cfg))
 
     def train_epoch(self) -> None:
-        self.model.train()
-        if isinstance(self.model, CDNP):
-            self.model.set_steps(self.state.step)
-        device = next(self.model.parameters()).device
+        self.train_model.train()
+        if isinstance(self.train_model, CDNP):
+            self.train_model.set_steps(self.state.step)
+        device = next(self.train_model.parameters()).device
         train_loader: tqdm[TaskType] = tqdm(
             self.train_loader, disable=not self.cfg.output.use_tqdm
         )
@@ -279,7 +288,7 @@ class Trainer:
 
             with p.profile("forward"):
                 with autocast(device_type=device.type, dtype=torch.float16):
-                    loss = self.model(ctx, trg)
+                    loss = self.train_model(ctx, trg)
 
             with p.profile("backward"):
                 self.grad_scaler.scale(loss).backward()
@@ -290,18 +299,19 @@ class Trainer:
                 if clip_norm > 0:
                     self.grad_scaler.unscale_(self.optimizer)
                     grad_norm = nn.utils.clip_grad_norm_(
-                        self.model.parameters(), clip_norm
+                        self.train_model.parameters(), clip_norm
                     )
                     self.metric_logger.log({"grad_norm": grad_norm})
 
                 self.grad_scaler.step(self.optimizer)
                 self.optimizer.zero_grad()
                 self.grad_scaler.update()
-                self.metric_logger.log({"lr": self.scheduler.get_last_lr()[0]})
+                if self.scheduler:
+                    self.metric_logger.log({"lr": self.scheduler.get_last_lr()[0]})
 
-            if self.ema_model:
+            if self.ema:
                 with p.profile("ema.update"):
-                    self.ema_model.update()
+                    self.ema.update()
 
             self.state.step += 1
 
@@ -312,12 +322,21 @@ class Trainer:
         if self.cfg.output.save_checkpoints:
             self.checkpoint_manager.save_checkpoint(
                 occasion.value,
-                self.model,
+                self.train_model,
                 self.optimizer,
                 self.generator,
                 self.scheduler,
                 self.state,
             )
+            if self.ema:
+                self.checkpoint_manager.save_checkpoint(
+                    occasion.value + "_ema",
+                    self.ema.get_shadow(),
+                    self.optimizer,
+                    self.generator,
+                    self.scheduler,
+                    self.state,
+                )
 
 
 if __name__ == "__main__":

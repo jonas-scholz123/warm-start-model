@@ -91,7 +91,7 @@ class Config:
     model: dict = MISSING
     optimizer: dict = MISSING
     output: OutputConfig = MISSING
-    scheduler: dict = MISSING
+    scheduler: Optional[dict] = MISSING
     paths: Paths = MISSING
     execution: ExecutionConfig = MISSING
 
