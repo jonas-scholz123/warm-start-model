@@ -21,7 +21,7 @@ paths:
 execution:
   epochs: ???
   seed: 42
-  gradient_clip_norm: 0.0
+  gradient_clip_norm: 1.0
   start_from: LATEST
   start_weights: null
   ema_rate: 0.0
