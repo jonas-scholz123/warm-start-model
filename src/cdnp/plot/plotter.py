@@ -31,12 +31,12 @@ class BasePlotter(ABC):
         self._norm_stds = torch.tensor(norm_stds).to(device)[None, :, None, None]
 
     @abstractmethod
-    def plot_prediction(self, model: DDPM, epoch: int = 0) -> None:
+    def plot_prediction(self, model: DDPM, step: int = 0) -> None:
         """
         Generate and save prediction plots using the provided model.
 
         :param model: The DDPM model to use for generating predictions.
-        :param epoch: The current epoch number, used for naming the saved plot.
+        :param step: The current step number, used for naming the saved plot.
         """
         pass
 
@@ -47,11 +47,11 @@ class BasePlotter(ABC):
         x = x * self._norm_stds + self._norm_means
         return x.clamp(0, 1)
 
-    def _get_path(self, epoch: int, filename: str = "image") -> Path:
+    def _get_path(self, step: int, filename: str = "image") -> Path:
         """
         Generate a path for saving the plot image.
         """
-        return self._dir.at(f"{filename}_ep{epoch}.png")
+        return self._dir / f"{filename}_ep{step}.png"
 
 
 class CcgenPlotter(BasePlotter):
@@ -70,7 +70,7 @@ class CcgenPlotter(BasePlotter):
         self._num_classes = num_classes
 
     @torch.no_grad()
-    def plot_prediction(self, model: DDPM, epoch: int = 0) -> None:
+    def plot_prediction(self, model: DDPM, step: int = 0) -> None:
         logger.info("Making and saving prediction plots")
         class_labels = (
             torch.arange(self._num_classes)
@@ -86,7 +86,7 @@ class CcgenPlotter(BasePlotter):
         x_gen = self._unnormalize(x_gen)
 
         grid = make_grid(x_gen, nrow=self._num_classes)
-        save_image(grid, self._get_path(epoch))
+        save_image(grid, self._get_path(step))
 
 
 class InpaintPlotter(BasePlotter):
@@ -114,7 +114,7 @@ class InpaintPlotter(BasePlotter):
         self.trg = self.trg.to(self._device)
 
     @torch.no_grad()
-    def plot_prediction(self, model: DDPM | CNP | CDNP, epoch: int = 0) -> None:
+    def plot_prediction(self, model: DDPM | CNP | CDNP, step: int = 0) -> None:
         plottables = []
         x_gen = model.make_plot(self.ctx)
         for x in x_gen:
@@ -134,7 +134,7 @@ class InpaintPlotter(BasePlotter):
 
         x_gen = torch.cat(plottables, dim=0)
         grid = make_grid(x_gen, nrow=self._num_samples)
-        save_image(grid, self._get_path(epoch))
+        save_image(grid, self._get_path(step))
 
 
 class ForecastPlotter(BasePlotter):
@@ -164,7 +164,7 @@ class ForecastPlotter(BasePlotter):
         self.trg = self.trg.to(self._device)
 
     @torch.no_grad()
-    def plot_prediction(self, model: DDPM | CNP | CDNP, epoch: int = 0) -> None:
+    def plot_prediction(self, model: DDPM | CNP | CDNP, step: int = 0) -> None:
         plottables = model.make_plot(self.ctx)  # B, C, H, W
         plottables = [self.trg] + plottables
         # Take the first sample from each batch
@@ -191,4 +191,4 @@ class ForecastPlotter(BasePlotter):
             row_titles=[f"Channel {i + 1}" for i in range(grid.shape[-1])],
             share_cmap="none",
         )
-        fig.savefig(self._get_path(epoch, "forecast_plot"), bbox_inches="tight")
+        fig.savefig(self._get_path(step, "forecast_plot"), bbox_inches="tight")

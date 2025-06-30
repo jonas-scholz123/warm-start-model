@@ -59,7 +59,7 @@ ds = make_gridded_weather_task(
 # %%
 
 path = Path(
-    "/home/jonas/Documents/code/denoising-np/_output/2025-06-12_18-30_gentle_bear"
+    "/home/jonas/Documents/code/denoising-np/_output/2025-06-17_11-49_clever_vulture"
 )
 path = ExperimentPath.from_path(path)
 cfg = path.get_config()
@@ -110,7 +110,7 @@ N_timesteps = 200
 num_static_dims = 37
 num_dyn_dims = 2
 
-mean_model = True
+mean_model = False
 
 ctx, trg = exp.preprocess_fn(batch)
 ctx, trg = ctx.to(device), trg.to(device)
@@ -186,3 +186,5 @@ gp.plot_single(
     ax=ax,
     show_cbar=False,
 )
+
+# %%

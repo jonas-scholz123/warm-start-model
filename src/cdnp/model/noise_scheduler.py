@@ -149,7 +149,7 @@ class CDNPScheduler(SchedulerMixin, ConfigMixin):
         clip_sample: bool = False,
         prediction_type: str = "epsilon",
         thresholding: bool = False,
-        dynamic_thresholding_ratio: float = 0.995,
+        dynamic_thresholding_ratio: float = 0.9998,
         clip_sample_range: float = 1.0,
         sample_max_value: float = 1.0,
         timestep_spacing: str = "leading",

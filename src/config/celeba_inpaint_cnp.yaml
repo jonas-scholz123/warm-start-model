@@ -11,7 +11,7 @@ model:
     out_channels: 6 # RGB image * (mean + stddev)
   
 execution:
-  epochs: 30
+  train_steps: 50000
 
 data:
   in_channels: 4 # masked RGB input + mask

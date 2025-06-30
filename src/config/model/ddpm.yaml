@@ -10,4 +10,4 @@ model:
     _target_: torch.nn.MSELoss
 
 execution:
-  ema_rate: 0.9999
+  ema_rate: 0.9998

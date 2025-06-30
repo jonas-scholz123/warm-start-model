@@ -40,7 +40,7 @@ def pad_bottom_right(
     return out
 
 
-def geopad(x: torch.Tensor, target_height: int, target_width: int) -> torch.Tensor:
+def geopad(x: torch.Tensor, target_height: int, target_width: int) -> tuple[torch.Tensor, int, int]:
     """
     Pads a channel-last tensor (B, H, W, C) to target_height and target_width by adding
     wrap-around padding to the left and right, and reflective padding to the bottom.
@@ -81,4 +81,4 @@ def geopad(x: torch.Tensor, target_height: int, target_width: int) -> torch.Tens
     pad = (0, 0, pad_top, pad_bottom)  # 0, 0 => no more padding on width
     x = F.pad(x, pad=pad, mode="reflect")
 
-    return x.permute(0, 2, 3, 1)  # Convert back to (B, H, W, C)
+    return x.permute(0, 2, 3, 1), pad_left, pad_bottom

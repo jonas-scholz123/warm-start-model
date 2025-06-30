@@ -16,7 +16,7 @@ model:
     out_channels: 3 # RGB image
   
 execution:
-  epochs: 100
+  train_steps: 300000
 
 data:
   preprocess_fn:

@@ -18,4 +18,4 @@ model:
 
   
 execution:
-  epochs: 20
+  train_steps: 50000

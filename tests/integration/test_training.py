@@ -30,7 +30,7 @@ def test_training_works(tmpdir: Path, config_name: str) -> None:
         config_name=config_name,
         overrides=[
             "mode=dev",
-            "execution.epochs=1",
+            "execution.train_steps=20",
             f"runtime.root={tmpdir}",
         ],
     )

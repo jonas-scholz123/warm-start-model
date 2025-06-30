@@ -15,7 +15,6 @@ SKIP_KEYS = {
     "root",
     "testloader",
     "paths",
-    "epochs",
 }
 
 
@@ -49,7 +48,7 @@ class CheckpointOccasion(Enum):
 @dataclass
 class ExecutionConfig:
     dry_run: bool
-    epochs: int
+    train_steps: int
     seed: int
     gradient_clip_norm: float
     ema_rate: float
@@ -69,6 +68,9 @@ class OutputConfig:
     log_level: str
     metrics: list[str]
     plotter: Optional[dict]
+    save_freq: int
+    eval_freq: int
+    plot_freq: int
 
 
 @dataclass
@@ -91,7 +93,7 @@ class Config:
     model: dict = MISSING
     optimizer: dict = MISSING
     output: OutputConfig = MISSING
-    scheduler: dict = MISSING
+    scheduler: Optional[dict] = MISSING
     paths: Paths = MISSING
     execution: ExecutionConfig = MISSING
 
