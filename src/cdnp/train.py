@@ -95,7 +95,6 @@ class Trainer:
         self.cfg = cfg
         self.model = model
         self.ema_model = ema_model
-        print(ema_model)
         self.optimizer = optimizer
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -210,6 +209,7 @@ class Trainer:
 
         for batch in train_iter:
             if self.state.step % self.cfg.output.eval_freq == 0 or dry_run:
+                logger.info("Evaluating on validation set")
                 with self.ema_model:
                     val_metrics = evaluate(
                         self.model,
@@ -226,10 +226,12 @@ class Trainer:
                     self.save_checkpoint(CheckpointOccasion.BEST)
 
             if self.state.step % self.cfg.output.plot_freq == 0 or dry_run:
+                logger.info("Plotting predictions")
                 if self.plotter:
                     self.plotter.plot_prediction(self.model, self.state.step)
 
             if self.state.step % self.cfg.output.save_freq == 0 or dry_run:
+                logger.info("Saving checkpoint")
                 self.save_checkpoint(CheckpointOccasion.LATEST)
 
             self.model.train()
