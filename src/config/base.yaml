@@ -55,14 +55,9 @@ model:
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
-  lr: 3e-4
+  lr: 1e-4
 
-scheduler:
-  _target_: torch.optim.lr_scheduler.LinearLR
-  _partial_: true
-  start_factor: 1.0
-  end_factor: 0.0
-  total_iters: ${execution.train_steps}
+scheduler: null
 
 data:
   cache: false

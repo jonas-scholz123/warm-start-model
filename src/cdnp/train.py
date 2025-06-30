@@ -22,6 +22,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cdnp.evaluate import Metric, evaluate
+from cdnp.model.ema import ExponentialMovingAverage
 from cdnp.plot.plotter import CcgenPlotter
 from cdnp.task import PreprocessFn
 from cdnp.util.instantiate import Experiment
@@ -90,11 +91,12 @@ class Trainer:
         plotter: Optional[CcgenPlotter],
         preprocess_fn: PreprocessFn,
         metrics: list[Metric],
-        ema_model: Optional[nn.Module],
+        ema: Optional[ExponentialMovingAverage],
     ):
         self.cfg = cfg
-        self.model = model
-        self.ema_model = ema_model
+        self.train_model = model
+        self.ema = ema
+        self.inference_model = ema.get_shadow() if ema else model
         self.optimizer = optimizer
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -126,7 +128,7 @@ class Trainer:
         weights_name = self.cfg.execution.start_weights
         if weights_name:
             weights_path = self.cfg.paths.weights / weights_name
-            CheckpointManager.reproduce_model_from_path(self.model, weights_path)
+            CheckpointManager.reproduce_model_from_path(self.train_model, weights_path)
             logger.info(
                 "Pretrained model loaded from path {}, starting from pretrained.",
                 weights_path,
@@ -134,12 +136,21 @@ class Trainer:
         elif start_from and self.checkpoint_manager.checkpoint_exists(start_from.value):
             self.checkpoint_manager.reproduce(
                 start_from.value,
-                self.model,
+                self.train_model,
                 self.optimizer,
                 self.generator,
                 self.scheduler,
                 initial_state,
             )
+            if self.ema:
+                self.checkpoint_manager.reproduce(
+                    start_from.value + "_ema",
+                    self.ema.get_shadow(),
+                    self.optimizer,
+                    self.generator,
+                    self.scheduler,
+                    initial_state,
+                )
 
             logger.info(
                 "Checkpoint loaded, val loss: {}, step: {}",
@@ -193,7 +204,7 @@ class Trainer:
 
         if self.cfg.output.use_wandb and self.cfg.output.log_gradients:
             wandb.watch(
-                self.model,
+                self.train_model,
                 log="all",
                 log_freq=self.cfg.output.gradient_log_freq,
             )
@@ -292,12 +303,21 @@ class Trainer:
         if self.cfg.output.save_checkpoints:
             self.checkpoint_manager.save_checkpoint(
                 occasion.value,
-                self.model,
+                self.train_model,
                 self.optimizer,
                 self.generator,
                 self.scheduler,
                 self.state,
             )
+            if self.ema:
+                self.checkpoint_manager.save_checkpoint(
+                    occasion.value + "_ema",
+                    self.ema.get_shadow(),
+                    self.optimizer,
+                    self.generator,
+                    self.scheduler,
+                    self.state,
+                )
 
 
 if __name__ == "__main__":
