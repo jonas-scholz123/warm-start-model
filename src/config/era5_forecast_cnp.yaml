@@ -17,7 +17,7 @@ model:
   min_std: 0.05
   
 execution:
-  epochs: 100
+  train_steps: 50000
 
 data:
   trainloader:

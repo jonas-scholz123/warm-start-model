@@ -17,7 +17,7 @@ model:
     out_channels: 1 # T2M predicted noise
   
 execution:
-  epochs: 100
+  train_steps: 50000
 
 data:
   trainloader:

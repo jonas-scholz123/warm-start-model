@@ -19,7 +19,7 @@ paths:
   weights: ${runtime.root}/_weights
 
 execution:
-  epochs: ???
+  train_steps: ???
   seed: 42
   gradient_clip_norm: 1.0
   start_from: LATEST
@@ -32,6 +32,9 @@ output:
   wandb_project: cdnp
   log_gradients: false
   gradient_log_freq: 100
+  save_freq: 5000
+  eval_freq: 5000
+  plot_freq: 5000
   use_tqdm: true
   log_level: INFO
   metrics: 
@@ -59,7 +62,7 @@ scheduler:
   _partial_: true
   start_factor: 1.0
   end_factor: 0.0
-  total_iters: ${execution.epochs}
+  total_iters: ${execution.train_steps}
 
 data:
   cache: false

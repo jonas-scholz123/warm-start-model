@@ -8,6 +8,7 @@ import wandb
 from dotenv import load_dotenv
 from loguru import logger
 from mlbnb.checkpoint import CheckpointManager, TrainerState
+from mlbnb.iter import StepIterator
 from mlbnb.metric_logger import WandbLogger
 from mlbnb.paths import ExperimentPath
 from mlbnb.profiler import WandbProfiler
@@ -21,7 +22,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from cdnp.evaluate import Metric, evaluate
-from cdnp.model.cdnp import CDNP
 from cdnp.plot.plotter import CcgenPlotter
 from cdnp.task import PreprocessFn
 from cdnp.util.instantiate import Experiment
@@ -95,6 +95,7 @@ class Trainer:
         self.cfg = cfg
         self.model = model
         self.ema_model = ema_model
+        print(ema_model)
         self.optimizer = optimizer
         self.train_loader = train_loader
         self.val_loader = val_loader
@@ -142,23 +143,18 @@ class Trainer:
             )
 
             logger.info(
-                "Checkpoint loaded, val loss: {}, epoch: {}, step: {}",
+                "Checkpoint loaded, val loss: {}, step: {}",
                 initial_state.val_loss,
-                initial_state.epoch,
                 initial_state.step,
             )
         else:
             logger.info("Starting from scratch")
 
-        if initial_state.epoch < self.cfg.execution.epochs:
-            # Checkpoint is at end of epoch, add 1 for next epoch.
-            initial_state.epoch += 1
-            initial_state.step += 1
-        else:
+        if initial_state.step >= self.cfg.execution.train_steps:
             logger.info(
-                "Run has concluded (epoch {} / {})",
-                initial_state.epoch,
-                self.cfg.execution.epochs,
+                "Run has concluded (step {} / {})",
+                initial_state.step,
+                self.cfg.execution.train_steps,
             )
         return initial_state
 
@@ -205,108 +201,90 @@ class Trainer:
 
         logger.info("Starting training")
 
-        if self.plotter:
-            self.plotter.plot_prediction(self.model, s.epoch)
+        train_iter = tqdm(
+            StepIterator(self.train_loader, self.cfg.execution.train_steps),
+            total=self.cfg.execution.train_steps,
+        )
 
-        with self.ema_model:
-            val_metrics = evaluate(
-                self.model,
-                self.val_loader,
-                self.preprocess_fn,
-                self.metrics,
-                self.cfg.execution.dry_run,
-            )
-        self.metric_logger.log(val_metrics, prefix="val")
+        dry_run = self.cfg.execution.dry_run
 
-        while s.epoch <= self.cfg.execution.epochs:
-            logger.info("Starting epoch {} / {}", s.epoch, self.cfg.execution.epochs)
-            self.train_epoch()
-            with self.ema_model:
+        for batch in train_iter:
+            if self.state.step % self.cfg.output.eval_freq == 0 or dry_run:
+                with self.ema_model:
+                    val_metrics = evaluate(
+                        self.model,
+                        self.val_loader,
+                        self.preprocess_fn,
+                        self.metrics,
+                        self.cfg.execution.dry_run,
+                    )
+                self._log_wandb(val_metrics, prefix="val")
+                s.val_loss = val_metrics["loss"]
+                if s.val_loss < s.best_val_loss:
+                    logger.success("New best val loss: {}", s.val_loss)
+                    s.best_val_loss = s.val_loss
+                    self.save_checkpoint(CheckpointOccasion.BEST)
+
+            if self.state.step % self.cfg.output.plot_freq == 0 or dry_run:
                 if self.plotter:
-                    self.plotter.plot_prediction(self.model, s.epoch)
+                    self.plotter.plot_prediction(self.model, self.state.step)
 
-                val_metrics = evaluate(
-                    self.model,
-                    self.val_loader,
-                    self.preprocess_fn,
-                    self.metrics,
-                    self.cfg.execution.dry_run,
-                )
-            self.metric_logger.log(val_metrics, prefix="val")
+            if self.state.step % self.cfg.output.save_freq == 0 or dry_run:
+                self.save_checkpoint(CheckpointOccasion.LATEST)
 
-            s.val_loss = val_metrics["loss"]
-
-            self.save_checkpoint(CheckpointOccasion.LATEST)
-
-            if s.val_loss < s.best_val_loss:
-                logger.success("New best val loss: {}", s.val_loss)
-                s.best_val_loss = s.val_loss
-                self.save_checkpoint(CheckpointOccasion.BEST)
-
-            if self.scheduler:
-                self.scheduler.step()
-
-            s.epoch += 1
-            s.best_val_loss = s.best_val_loss
+            self.model.train()
+            self.train_step(batch)
+            self.model.eval()
 
         logger.success("Finished training")
 
     def _save_config(self) -> None:
-        with self.experiment_path.open("cfg.yaml", "w") as f:
+        with open(self.experiment_path / "cfg.yaml", "w") as f:
             f.write(OmegaConf.to_yaml(self.cfg))
 
-    def train_epoch(self) -> None:
-        self.model.train()
-        if isinstance(self.model, CDNP):
-            self.model.set_steps(self.state.step)
-        device = next(self.model.parameters()).device
-        train_loader: tqdm[TaskType] = tqdm(
-            self.train_loader, disable=not self.cfg.output.use_tqdm
-        )
-        dry_run = self.cfg.execution.dry_run
+    def _log_wandb(self, metrics: dict[str, float], prefix: str = "misc") -> None:
+        self.metric_logger.log({f"{prefix}/{k}": v for k, v in metrics.items()})
 
-        if dry_run:
-            _ = next(iter(train_loader))
+    def train_step(self, batch: TaskType) -> None:
+        device = next(self.model.parameters()).device
 
         p = self.profiler
-        for batch in p.profiled_iter("dataload", train_loader):
-            with p.profile("preprocess"):
-                ctx, trg = self.preprocess_fn(batch)
 
-            with p.profile("data.to"):
-                ctx = ctx.to(device, non_blocking=True)
-                trg = trg.to(device, non_blocking=True)
+        with p.profile("preprocess"):
+            ctx, trg = self.preprocess_fn(batch)
 
-            with p.profile("forward"):
-                with autocast(device_type=device.type, dtype=torch.float16):
-                    loss = self.model(ctx, trg)
+        with p.profile("data.to"):
+            ctx = ctx.to(device, non_blocking=True)
+            trg = trg.to(device, non_blocking=True)
 
-            with p.profile("backward"):
-                self.grad_scaler.scale(loss).backward()
-                self.metric_logger.log({"loss": loss.item()}, prefix="train")
+        with p.profile("forward"):
+            with autocast(device_type=device.type, dtype=torch.float16):
+                loss = self.model(ctx, trg)
 
-            with p.profile("optimizer.step"):
-                clip_norm: float = self.cfg.execution.gradient_clip_norm
-                if clip_norm > 0:
-                    self.grad_scaler.unscale_(self.optimizer)
-                    grad_norm = nn.utils.clip_grad_norm_(
-                        self.model.parameters(), clip_norm
-                    )
-                    self.metric_logger.log({"grad_norm": grad_norm})
+        with p.profile("backward"):
+            self.grad_scaler.scale(loss).backward()
+            self._log_wandb({"loss": loss.item()}, prefix="train")
 
-                self.grad_scaler.step(self.optimizer)
-                self.optimizer.zero_grad()
-                self.grad_scaler.update()
-                self.metric_logger.log({"lr": self.scheduler.get_last_lr()[0]})
+        with p.profile("optimizer.step"):
+            clip_norm: float = self.cfg.execution.gradient_clip_norm
+            if clip_norm > 0:
+                self.grad_scaler.unscale_(self.optimizer)
+                grad_norm = nn.utils.clip_grad_norm_(self.model.parameters(), clip_norm)
+                self._log_wandb({"grad_norm": grad_norm})
 
-            if self.ema_model:
-                with p.profile("ema.update"):
-                    self.ema_model.update()
+            self.grad_scaler.step(self.optimizer)
+            self.optimizer.zero_grad()
+            self.grad_scaler.update()
+            self._log_wandb({"lr": self.scheduler.get_last_lr()[0]})
 
-            self.state.step += 1
+        if self.ema_model:
+            with p.profile("ema.update"):
+                self.ema_model.update()
 
-            if dry_run:
-                break
+        if self.scheduler:
+            self.scheduler.step()
+
+        self.state.step += 1
 
     def save_checkpoint(self, occasion: CheckpointOccasion):
         if self.cfg.output.save_checkpoints:
