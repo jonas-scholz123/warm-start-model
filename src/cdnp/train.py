@@ -94,7 +94,7 @@ class Trainer:
         ema: Optional[ExponentialMovingAverage],
     ):
         self.cfg = cfg
-        self.train_model = model
+        self.model = model
         self.ema = ema
         self.inference_model = ema.get_shadow() if ema else model
         self.optimizer = optimizer
@@ -128,7 +128,7 @@ class Trainer:
         weights_name = self.cfg.execution.start_weights
         if weights_name:
             weights_path = self.cfg.paths.weights / weights_name
-            CheckpointManager.reproduce_model_from_path(self.train_model, weights_path)
+            CheckpointManager.reproduce_model_from_path(self.model, weights_path)
             logger.info(
                 "Pretrained model loaded from path {}, starting from pretrained.",
                 weights_path,
@@ -136,7 +136,7 @@ class Trainer:
         elif start_from and self.checkpoint_manager.checkpoint_exists(start_from.value):
             self.checkpoint_manager.reproduce(
                 start_from.value,
-                self.train_model,
+                self.model,
                 self.optimizer,
                 self.generator,
                 self.scheduler,
@@ -204,7 +204,7 @@ class Trainer:
 
         if self.cfg.output.use_wandb and self.cfg.output.log_gradients:
             wandb.watch(
-                self.train_model,
+                self.model,
                 log="all",
                 log_freq=self.cfg.output.gradient_log_freq,
             )
@@ -221,14 +221,13 @@ class Trainer:
         for batch in train_iter:
             if self.state.step % self.cfg.output.eval_freq == 0 or dry_run:
                 logger.info("Evaluating on validation set")
-                with self.ema_model:
-                    val_metrics = evaluate(
-                        self.model,
-                        self.val_loader,
-                        self.preprocess_fn,
-                        self.metrics,
-                        self.cfg.execution.dry_run,
-                    )
+                val_metrics = evaluate(
+                    self.inference_model,
+                    self.val_loader,
+                    self.preprocess_fn,
+                    self.metrics,
+                    self.cfg.execution.dry_run,
+                )
                 self._log_wandb(val_metrics, prefix="val")
                 s.val_loss = val_metrics["loss"]
                 if s.val_loss < s.best_val_loss:
@@ -239,7 +238,7 @@ class Trainer:
             if self.state.step % self.cfg.output.plot_freq == 0 or dry_run:
                 logger.info("Plotting predictions")
                 if self.plotter:
-                    self.plotter.plot_prediction(self.model, self.state.step)
+                    self.plotter.plot_prediction(self.inference_model, self.state.step)
 
             if self.state.step % self.cfg.output.save_freq == 0 or dry_run:
                 logger.info("Saving checkpoint")
@@ -288,11 +287,11 @@ class Trainer:
             self.grad_scaler.step(self.optimizer)
             self.optimizer.zero_grad()
             self.grad_scaler.update()
-            self._log_wandb({"lr": self.scheduler.get_last_lr()[0]})
+            if self.scheduler:
+                self._log_wandb({"lr": self.scheduler.get_last_lr()[0]})
 
-        if self.ema_model:
-            with p.profile("ema.update"):
-                self.ema_model.update()
+        if self.ema:
+            self.ema.update()
 
         if self.scheduler:
             self.scheduler.step()
@@ -303,7 +302,7 @@ class Trainer:
         if self.cfg.output.save_checkpoints:
             self.checkpoint_manager.save_checkpoint(
                 occasion.value,
-                self.train_model,
+                self.model,
                 self.optimizer,
                 self.generator,
                 self.scheduler,
