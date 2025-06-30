@@ -56,8 +56,6 @@ module load cuda/12.1 cudnn/8.9_cuda-12.1
 
 source ~/.bashrc
 
-source .venv/bin/activate
-
 export WANDB_MODE=online
 
 #! Full path to application executable:
@@ -88,6 +86,8 @@ CMD="$application $@"
 
 cd $workdir
 echo -e "Changed directory to `pwd`.\n"
+
+source .venv/bin/activate
 
 JOBID=$SLURM_JOB_ID
 
