@@ -51,9 +51,6 @@ mpi_tasks_per_node=$(echo "$SLURM_TASKS_PER_NODE" | sed -e  's/^\([0-9][0-9]*\).
 module purge                               # Removes all modules still loaded
 module load rhel8/default-amp              # REQUIRED - loads the basic environment
 
-#! Insert additional module load commands after this line if needed:
-module load cuda/12.1 cudnn/8.9_cuda-12.1
-
 source ~/.bashrc
 
 export WANDB_MODE=online
