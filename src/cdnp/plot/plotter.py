@@ -98,6 +98,34 @@ class CcgenPlotter(BasePlotter):
         self._log_to_wandb(grid, step, "ccgen")
 
 
+class ImgenPlotter(BasePlotter):
+    def __init__(
+        self,
+        device: str | torch.device,
+        num_samples: int,
+        norm_means: tuple[float, ...],
+        norm_stds: tuple[float, ...],
+        test_data: Optional[Dataset] = None,
+        save_to: Optional[ExperimentPath] = None,
+    ):
+        super().__init__(device, norm_means, norm_stds, save_to)
+        self._num_samples = num_samples
+
+    @torch.no_grad()
+    def plot_prediction(self, model: DDPM, step: int = 0) -> None:
+        logger.info("Making and saving prediction plots")
+
+        ctx = ModelCtx()
+
+        x_gen = model.sample(ctx, self._num_samples)
+        x_gen = self._unnormalize(x_gen)
+
+        grid = make_grid(x_gen, nrow=int(self._num_samples**0.5))
+        if self._dir:
+            save_image(grid, self._get_path(step))
+        self._log_to_wandb(grid, step, "imgen")
+
+
 class InpaintPlotter(BasePlotter):
     def __init__(
         self,

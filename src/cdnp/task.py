@@ -17,6 +17,13 @@ def preprocess_ccgen(
     return ModelCtx(label_ctx=y), x
 
 
+def preprocess_imgen(
+    batch: tuple[torch.Tensor, torch.Tensor],
+) -> tuple[ModelCtx, torch.Tensor]:
+    x, _ = batch
+    return ModelCtx(), x
+
+
 def preprocess_inpaint(
     batch: tuple[torch.Tensor, torch.Tensor],
     gen: torch.Generator,
