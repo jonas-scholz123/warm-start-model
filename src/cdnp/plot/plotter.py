@@ -4,12 +4,14 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 import torch
+import wandb
 from loguru import logger
 from mlbnb.paths import ExperimentPath
 from torch.utils.data import Dataset
 from torch.utils.data._utils.collate import default_collate
 from torchvision.utils import make_grid, save_image
 
+import matplotlib.pyplot as plt
 from cdnp.data.era5 import GriddedWeatherTask
 from cdnp.model.cdnp import CDNP
 from cdnp.model.cnp import CNP
@@ -53,6 +55,11 @@ class BasePlotter(ABC):
         """
         return self._dir / f"{filename}_ep{step}.png"
 
+    def _log_to_wandb(self, data: Any, step: int, name: str) -> None:
+        """Logs plots to wandb if available."""
+        if wandb.run:
+            wandb.log({f"plots/{name}": wandb.Image(data, caption=f"Step {step}")}, step=step)
+
 
 class CcgenPlotter(BasePlotter):
     def __init__(
@@ -86,7 +93,9 @@ class CcgenPlotter(BasePlotter):
         x_gen = self._unnormalize(x_gen)
 
         grid = make_grid(x_gen, nrow=self._num_classes)
-        save_image(grid, self._get_path(step))
+        if self._dir:
+            save_image(grid, self._get_path(step))
+        self._log_to_wandb(grid, step, "ccgen")
 
 
 class InpaintPlotter(BasePlotter):
@@ -134,7 +143,9 @@ class InpaintPlotter(BasePlotter):
 
         x_gen = torch.cat(plottables, dim=0)
         grid = make_grid(x_gen, nrow=self._num_samples)
-        save_image(grid, self._get_path(step))
+        if self._dir:
+            save_image(grid, self._get_path(step))
+        self._log_to_wandb(grid, step, "inpaint")
 
 
 class ForecastPlotter(BasePlotter):
@@ -191,4 +202,7 @@ class ForecastPlotter(BasePlotter):
             row_titles=[f"Channel {i + 1}" for i in range(grid.shape[-1])],
             share_cmap="none",
         )
-        fig.savefig(self._get_path(step, "forecast_plot"), bbox_inches="tight")
+        if self._dir:
+            fig.savefig(self._get_path(step, "forecast_plot"), bbox_inches="tight")
+        self._log_to_wandb(fig, step, "forecast")
+        plt.close(fig)
