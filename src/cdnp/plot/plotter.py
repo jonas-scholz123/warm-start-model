@@ -23,14 +23,10 @@ class BasePlotter(ABC):
     def __init__(
         self,
         device: str | torch.device,
-        norm_means: tuple[float, ...],
-        norm_stds: tuple[float, ...],
         save_to: Optional[ExperimentPath] = None,
     ):
         self._device = device
         self._dir = save_to
-        self._norm_means = torch.tensor(norm_means).to(device)[None, :, None, None]
-        self._norm_stds = torch.tensor(norm_stds).to(device)[None, :, None, None]
 
     @abstractmethod
     def plot_prediction(self, model: DDPM, step: int = 0) -> None:
@@ -44,9 +40,9 @@ class BasePlotter(ABC):
 
     def _unnormalize(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Unnormalize the image tensor using the provided means and stds.
+        Unnormalize the image tensor from [-1, 1] to [0, 1].
         """
-        x = x * self._norm_stds + self._norm_means
+        x = (x + 1) / 2
         return x.clamp(0, 1)
 
     def _get_path(self, step: int, filename: str = "image") -> Path:
@@ -67,12 +63,10 @@ class CcgenPlotter(BasePlotter):
         device: str | torch.device,
         num_samples: int,
         num_classes: int,
-        norm_means: tuple[float, ...],
-        norm_stds: tuple[float, ...],
         test_data: Dataset,
         save_to: Optional[ExperimentPath] = None,
     ):
-        super().__init__(device, norm_means, norm_stds, save_to)
+        super().__init__(device, save_to)
         self._num_samples = num_samples
         self._num_classes = num_classes
 
@@ -103,12 +97,10 @@ class ImgenPlotter(BasePlotter):
         self,
         device: str | torch.device,
         num_samples: int,
-        norm_means: tuple[float, ...],
-        norm_stds: tuple[float, ...],
         test_data: Optional[Dataset] = None,
         save_to: Optional[ExperimentPath] = None,
     ):
-        super().__init__(device, norm_means, norm_stds, save_to)
+        super().__init__(device, save_to)
         self._num_samples = num_samples
 
     @torch.no_grad()
@@ -131,13 +123,11 @@ class InpaintPlotter(BasePlotter):
         self,
         device: str | torch.device,
         num_samples: int,
-        norm_means: tuple[float, ...],
-        norm_stds: tuple[float, ...],
         test_data: Dataset,
         preprocess_fn: Callable[[Any], tuple[ModelCtx, torch.Tensor]],
         save_to: Optional[ExperimentPath] = None,
     ):
-        super().__init__(device, norm_means, norm_stds, save_to)
+        super().__init__(device, save_to)
         self._num_samples = num_samples
         self._dataset = test_data
         self._preprocess_fn = preprocess_fn

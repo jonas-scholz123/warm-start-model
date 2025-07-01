@@ -13,8 +13,6 @@ class Cifar10Dataset(Dataset):
         paths: Paths,
         val_fraction: float,
         split: Split,
-        norm_means: tuple[float, float, float],
-        norm_stds: tuple[float, float, float],
         generator: torch.Generator,
     ):
         self.device = generator.device
@@ -22,10 +20,7 @@ class Cifar10Dataset(Dataset):
             [
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=norm_means,
-                    std=norm_stds,
-                ),
+                transforms.Lambda(lambda t: (t * 2) - 1),
             ]
         )
 

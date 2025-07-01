@@ -11,8 +11,9 @@ from cdnp.model.ddpm import DDPM
 from cdnp.task import ModelCtx, PreprocessFn
 
 
-def unnormalise(x: torch.Tensor, mean: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
-    x = x * std + mean
+def unnormalise(x: torch.Tensor) -> torch.Tensor:
+    # Unnormalise from [-1, 1] to [0, 1]
+    x = (x + 1) / 2
     return x.clamp(0, 1)
 
 
@@ -55,14 +56,12 @@ class LossMetric(Metric):
 
 class FIDMetric(Metric):
     def __init__(
-        self, num_samples: int, means: list[int], stds: list[int], device: str
+        self, num_samples: int, device: str
     ):
         self.fid = FrechetInceptionDistance(feature_dim=2048).to(device)
         self.num_samples = num_samples
         self.count = 0
         self.device = device
-        self.means = torch.tensor(means).view(1, 3, 1, 1).to(device)
-        self.stds = torch.tensor(stds).view(1, 3, 1, 1).to(device)
 
     def update(
         self, model: CDNP | DDPM | CNP, ctx: ModelCtx, trg: torch.Tensor
@@ -72,10 +71,10 @@ class FIDMetric(Metric):
 
         num_samples = trg.shape[0]
         fake_images = model.sample(ctx, num_samples=num_samples)
-        fake_images = unnormalise(fake_images, self.means, self.stds)
+        fake_images = unnormalise(fake_images)
         self.fid.update(fake_images, is_real=False)
 
-        real_images = unnormalise(trg, self.means, self.stds)
+        real_images = unnormalise(trg)
         self.fid.update(real_images, is_real=True)
         self.count += real_images.shape[0]
 
