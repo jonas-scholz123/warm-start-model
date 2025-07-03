@@ -17,6 +17,7 @@ model:
   
 execution:
   train_steps: 300000
+  ema_rate: 0.99
 
 data:
   preprocess_fn:
@@ -24,6 +25,7 @@ data:
     max_frac: 0.1
   
 output:
+  plot_freq: 500
   metrics:
     - _target_: cdnp.evaluate.LossMetric
     - _target_: cdnp.evaluate.FIDMetric      
