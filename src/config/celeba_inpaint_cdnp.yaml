@@ -21,11 +21,6 @@ execution:
   train_steps: 300000
   ema_rate: 0.9995
 
-data:
-  preprocess_fn:
-    min_frac: 0.01
-    max_frac: 0.1
-  
 output:
   plot_freq: 1000
   metrics:
