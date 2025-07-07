@@ -3,7 +3,7 @@ defaults:
   - data: cifar10
   - task: inpaint
   - model: cnp
-  - model/backbone: bigAdd commentMore actions
+  - model/backbone: big
   - _self_
 
 data:
