@@ -8,7 +8,7 @@ defaults:
 
 model:
   noise_scheduler:
-    num_train_timesteps: 20
+    num_train_timesteps: 10
   cnp:
     _target_: cdnp.util.instantiate.load_model_from_path
     path: ${paths.weights}/celeba_cnp
