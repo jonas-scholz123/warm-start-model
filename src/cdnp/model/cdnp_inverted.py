@@ -1,5 +1,6 @@
 import torch
 from diffusers import DDPMScheduler, UNet2DModel
+from loguru import logger
 from torch import nn
 from torch.distributions import Normal
 
@@ -136,6 +137,7 @@ class CDNP(nn.Module):
         return plots
 
     def set_steps(self, steps: int) -> None:
-        stages = steps / 500
+        stage = steps / 500
         # This helps the model learn at the start by making the noise more obvious.
-        self.std_mult = max(self.initial_std_mult / 2**stages, 1.0)
+        self.std_mult = max(self.initial_std_mult / 2**stage, 1.0)
+        logger.info("Setting std_mult to {}", self.std_mult)

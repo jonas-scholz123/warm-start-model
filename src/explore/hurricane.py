@@ -59,7 +59,7 @@ ds = make_gridded_weather_task(
 # %%
 
 path = Path(
-    "/home/jonas/Documents/code/denoising-np/_output/2025-06-17_11-49_clever_vulture"
+    "/home/jonas/Documents/code/denoising-np/_weights/2025-06-17_11-49_clever_vulture"
 )
 path = ExperimentPath.from_path(path)
 cfg = path.get_config()

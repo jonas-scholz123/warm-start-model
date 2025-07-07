@@ -244,6 +244,9 @@ class Trainer:
                 logger.info("Saving checkpoint")
                 self.save_checkpoint(CheckpointOccasion.LATEST)
 
+            if self.state.step % 500 == 0 and hasattr(self.model, "set_steps"):
+                self.model.set_steps(self.state.step)
+
             self.model.train()
             self.train_step(batch)
             self.model.eval()
