@@ -12,10 +12,19 @@ model:
     path: ${paths.weights}/2025-06-02_17-19_kind_bear
     freeze: true # Freeze the trained CNP
   backbone:
-    in_channels: 7 # noised RGB image + masked RGB input + mask
+    in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
     out_channels: 3 # RGB image
 
 
-  
 execution:
   train_steps: 50000
+
+output:
+  plot_freq: 1000
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.FIDMetric      
+      num_samples: 5000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
