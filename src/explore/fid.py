@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import torch
 from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath
 from torchvision.utils import make_grid
@@ -28,6 +29,7 @@ _ = cm.reproduce_model(ema_model, "best_ema")
 mean = [0.5, 0.5, 0.5]
 std = [0.5, 0.5, 0.5]
 
+# %%
 metric = FIDMetric(num_samples=50_000, device="cuda", means=mean, stds=std)
 
 result = evaluate(
@@ -43,16 +45,61 @@ print(result)
 batch = next(iter(exp.val_loader))
 ctx, trg = exp.preprocess_fn(batch)
 ctx = ctx.to("cuda")
+trg = trg.to("cuda")
 
-out = model.sample(ctx, num_samples=16)
+out = model.sample(ctx, num_samples=12)
 
 
 plt.figure(figsize=(10, 20))
-out = out.cpu()
-trg = trg.cpu()
-grid = make_grid(out, nrow=4, normalize=True)
+grid = make_grid(out.cpu(), nrow=4, normalize=True)
 plt.imshow(grid.permute(1, 2, 0))
 plt.axis("off")
 plt.show()
 
+
 # %%
+def unnormalise(tensor: torch.Tensor) -> torch.Tensor:
+    """Unnormalise a tensor with given means and stds."""
+    means = torch.tensor(mean).view(1, 3, 1, 1).to(tensor.device)
+    stds = torch.tensor(std).view(1, 3, 1, 1).to(tensor.device)
+    normed = tensor * stds + means
+    return torch.clamp(normed, 0.0, 1.0)
+
+
+num_samples = 1
+ctx.image_ctx = ctx.image_ctx[:num_samples]
+trg = trg[:num_samples]
+plottables = model.make_plot(ctx)
+
+mask = ctx.image_ctx[:, -1:, :, :]
+mask = mask.expand(-1, 3, -1, -1)
+masked_x = ctx.image_ctx[:, :-1, :, :]
+
+pred_mean = plottables[1]
+pred_std = plottables[2]
+
+data_space = plottables[3::2]
+noise_space = plottables[2::2]
+
+plottables = data_space + noise_space
+
+plottables = [unnormalise(p) for p in plottables]
+plottables = torch.cat(plottables, dim=0)
+
+grid = make_grid(plottables.cpu(), nrow=plottables.shape[0] // 2)
+# grid = make_grid(plottables.cpu(), nrow=1)
+
+plt.figure(figsize=(10, 20))
+plt.imshow(grid.permute(1, 2, 0))
+plt.axis("off")
+plt.savefig("cdnp_sampling_process.png", bbox_inches="tight", dpi=300)
+plt.show()
+# %%
+
+plottables2 = [trg, masked_x]
+plottables2 = [unnormalise(p) for p in plottables2]
+plottables2 = torch.cat(plottables2, dim=0)
+grid2 = make_grid(plottables2.cpu(), nrow=2)
+plt.figure(figsize=(10, 20))
+plt.imshow(grid2.permute(1, 2, 0))
+plt.axis("off")

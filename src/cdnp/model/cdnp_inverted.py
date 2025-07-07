@@ -117,9 +117,8 @@ class CDNP(nn.Module):
         x_tilde = torch.randn_like(mean, device=self.device)
 
         for i, t in enumerate(self.noise_scheduler.timesteps):
-            if i % 2 == 0:
-                plots.append(x_tilde)
-                plots.append(x_tilde * std + mean)
+            plots.append(x_tilde)
+            plots.append(x_tilde * std + mean)
             model_input = self._cat_ctx(x_tilde, ctx)
 
             model_input = torch.cat([model_input, mean, std], dim=1)
@@ -131,6 +130,7 @@ class CDNP(nn.Module):
             out = self.noise_scheduler.step(prd_noise, t, x_tilde)
             x_tilde = out.prev_sample
 
+        plots.append(x_tilde)
         plots.append(x_tilde * std + mean)
 
         return plots
