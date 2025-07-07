@@ -15,5 +15,5 @@ model:
   min_std: 0.1 # Minimum stddev to stabilise
 
 execution:
-  train_steps: 50000
+  train_steps: 100000
   gradient_clip_norm: 40.0
