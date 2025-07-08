@@ -39,6 +39,7 @@ output:
   log_level: INFO
   metrics: 
     - _target_: cdnp.evaluate.LossMetric
+  final_metrics: []
 
 rng:
   generator:

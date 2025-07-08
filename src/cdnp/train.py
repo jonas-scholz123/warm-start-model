@@ -91,6 +91,7 @@ class Trainer:
         plotter: Optional[CcgenPlotter],
         preprocess_fn: PreprocessFn,
         metrics: list[Metric],
+        final_metrics: list[Metric],
         ema: Optional[ExponentialMovingAverage],
     ):
         self.cfg = cfg
@@ -107,6 +108,7 @@ class Trainer:
         self.plotter = plotter
         self.preprocess_fn = preprocess_fn
         self.metrics = metrics
+        self.final_metrics = final_metrics
         self.grad_scaler = GradScaler()
 
         self.state = self._load_initial_state()
@@ -195,6 +197,7 @@ class Trainer:
             exp.plotter,
             exp.preprocess_fn,
             exp.metrics,
+            exp.final_metrics,
             exp.ema_model,
         )
 
@@ -251,7 +254,28 @@ class Trainer:
             self.train_step(batch)
             self.model.eval()
 
+            if dry_run:
+                break
+
         logger.success("Finished training")
+        if self.final_metrics:
+            eval_loader = self.val_loader
+            if len(self.val_loader.dataset) < 50_000:
+                logger.warning(
+                    "Validation set is small, using training set for final evaluation."
+                )
+                eval_loader = self.train_loader
+
+            logger.info("Evaluating final metrics")
+            final_metrics = evaluate(
+                self.inference_model,
+                eval_loader,
+                self.preprocess_fn,
+                self.final_metrics,
+                self.cfg.execution.dry_run,
+            )
+            logger.info("Final metrics: {}", final_metrics)
+            self._log_wandb(final_metrics, prefix="final")
 
     def _save_config(self) -> None:
         with open(self.experiment_path / "cfg.yaml", "w") as f:

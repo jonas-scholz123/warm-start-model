@@ -13,3 +13,11 @@ model:
 
 execution:
   ema_rate: 0.9998
+
+output:
+  final_metrics:
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 50000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
