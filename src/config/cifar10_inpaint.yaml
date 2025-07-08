@@ -16,6 +16,9 @@ execution:
 
 data:
   in_channels: 7 # noised RGB image + masked RGB input + mask
+  preprocess_fn:
+    min_frac: 0.1
+    max_frac: 0.1
 
 output:
   metrics:

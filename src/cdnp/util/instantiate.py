@@ -3,11 +3,13 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 
 from hydra import compose, initialize
+from hydra.core.global_hydra import GlobalHydra
 from hydra.utils import instantiate
 from loguru import logger
 from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath
 from mlbnb.types import Split
+from omegaconf import OmegaConf
 from torch import Generator
 from torch.nn import Module
 from torch.optim.lr_scheduler import LRScheduler
@@ -36,6 +38,7 @@ class Experiment:
     plotter: Optional[CcgenPlotter]
     preprocess_fn: Callable[[Any], ModelCtx]
     metrics: list[Metric]
+    final_metrics: list[Metric]
     ema_model: Optional[ExponentialMovingAverage] = None
 
     @staticmethod
@@ -99,6 +102,7 @@ class Experiment:
             plotter=plotter,
             preprocess_fn=exp.data.preprocess_fn,
             metrics=exp.output.metrics,
+            final_metrics=exp.output.final_metrics,
             ema_model=ema_model,
         )
 
@@ -125,7 +129,12 @@ def load_config(
 
     all_overrides = [f"mode={mode}"] + (overrides or [])
 
-    with initialize(config_path=config_path):
+    if not GlobalHydra.instance().is_initialized():
+        with initialize(config_path=config_path):
+            cfg: Config = compose(  # type: ignore
+                config_name=config_name, overrides=all_overrides
+            )
+    else:
         cfg: Config = compose(  # type: ignore
             config_name=config_name, overrides=all_overrides
         )
@@ -141,7 +150,10 @@ def load_model_from_path(
     if isinstance(path, Path):
         path = ExperimentPath.from_path(path)
 
+    base_cfg = load_config(config_name="base")
     cfg: Config = path.get_config()
+    # For backward compatibility, merge base config, which contains default values
+    cfg = OmegaConf.merge(cfg, base_cfg)
     exp: Experiment = Experiment.from_config(cfg)
 
     cm = CheckpointManager(path)

@@ -12,9 +12,17 @@ model:
   
 execution:
   train_steps: 300000
+  ema_rate: 0.9995
 
 data:
   in_channels: 7 # noised RGB image + masked RGB input + mask
-  preprocess_fn:
-    min_frac: 0.05
-    max_frac: 0.3
+
+output:
+  plot_freq: 1000
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.FIDMetric      
+      num_samples: 100
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}

@@ -17,6 +17,7 @@ model:
     out_channels: 2 # U/V @ 10m predicted noise
   
 execution:
+  ema_rate: 0.0
   train_steps: 50000
 
 data:

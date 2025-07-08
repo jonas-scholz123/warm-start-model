@@ -6,11 +6,10 @@ dataset:
     _target_: cdnp.data.era5.ZarrDatasource.from_path
     path: /home/jonas/Documents/code/otter/_data/era5_240x121.zarr
   norm_path: /home/jonas/Documents/code/otter/otter/data/normalisation/stats
-  start_date: 2010-01-01
-  end_date: 2011-01-01
-  # Hurricane patricia
-  val_start_date: 2015-10-21
-  val_end_date: 2015-12-31
+  start_date: 2000-01-01
+  end_date: 2017-12-31
+  val_start_date: 2018-01-01
+  val_end_date: 2018-02-01
   num_context_frames: 2
   num_target_frames: 1
   temporal_resolution_hours: 6
