@@ -58,9 +58,9 @@ ds = make_gridded_weather_task(
 )
 # %%
 
-path = Path(
-    "/home/jonas/Documents/code/denoising-np/_weights/2025-06-17_11-49_clever_vulture"
-)
+exp_name = "2025-07-07_21-13_noble_iguana"
+
+path = Path("/home/jonas/Documents/code/denoising-np/_weights") / exp_name
 path = ExperimentPath.from_path(path)
 cfg = path.get_config()
 exp = Experiment.from_config(cfg)
@@ -102,7 +102,7 @@ ctx, trg = ctx.to(device), trg.to(device)
 
 cm = CheckpointManager(path)
 model: CDNP = exp.model
-_ = cm.reproduce_model(model, "latest")
+_ = cm.reproduce_model(model, "best")
 # %%
 model.set_steps(100000)
 # %%
@@ -110,7 +110,7 @@ N_timesteps = 200
 num_static_dims = 37
 num_dyn_dims = 2
 
-mean_model = False
+mean_model = True
 
 ctx, trg = exp.preprocess_fn(batch)
 ctx, trg = ctx.to(device), trg.to(device)
