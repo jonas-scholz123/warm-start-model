@@ -3,7 +3,7 @@ defaults:
   - data: cifar10
   - task: inpaint
   - model: cdnp
-  - model/backbone: small
+  - model/backbone: big
   - _self_
 
 model:
@@ -21,10 +21,10 @@ data:
     max_frac: 0.1
 
 execution:
-  train_steps: 50000
+  train_steps: 300000
 
 output:
-  plot_freq: 1000
+  plot_freq: 3000
   metrics:
     - _target_: cdnp.evaluate.LossMetric
     - _target_: cdnp.evaluate.FIDMetric      
