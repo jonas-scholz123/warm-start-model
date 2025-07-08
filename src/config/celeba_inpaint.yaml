@@ -22,7 +22,7 @@ output:
   metrics:
     - _target_: cdnp.evaluate.LossMetric
     - _target_: cdnp.evaluate.FIDMetric      
-      num_samples: 5000
+      num_samples: 100
       means: ${data.dataset.norm_means}
       stds: ${data.dataset.norm_stds}
       device: ${runtime.device}
