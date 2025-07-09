@@ -4,6 +4,7 @@ import torch
 from torch.amp import autocast
 from torch.utils.data.dataloader import DataLoader
 from torcheval.metrics import FrechetInceptionDistance
+from tqdm import tqdm
 
 from cdnp.model.cdnp import CDNP
 from cdnp.model.cnp import CNP
@@ -95,6 +96,7 @@ def evaluate(
     dataloader: DataLoader,
     preprocess_fn: PreprocessFn,
     metrics: list[Metric],
+    use_tqdm: bool = False,
     dry_run: bool = False,
 ) -> dict[str, float]:
     model.eval()
@@ -102,7 +104,7 @@ def evaluate(
 
     # TODO: make sure we don't repeat forward passes
     with autocast(device_type=device.type, dtype=torch.float16):
-        for batch in dataloader:
+        for batch in tqdm(dataloader, disable=not use_tqdm):
             ctx, trg = preprocess_fn(batch)
             ctx = ctx.to(device)
             trg = trg.to(device)
