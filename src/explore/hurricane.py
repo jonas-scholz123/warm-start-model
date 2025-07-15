@@ -230,12 +230,18 @@ def generate_forecasts(mean_model: bool, n_timesteps: int) -> list[torch.Tensor]
     return forecasts
 
 
-intervals = 24
-N_timesteps = 8 * intervals
+# %%
+
+intervals = 6
+num_timesteps_to_plot = 8
+N_timesteps = num_timesteps_to_plot * intervals
+num_samples = 4
 
 ground_truth = [ds[i][3] for i in range(N_timesteps)]
-mean_forecasts = generate_forecasts(mean_model=True, n_timesteps=N_timesteps)
-sampled_forecasts = generate_forecasts(mean_model=False, n_timesteps=N_timesteps)
+sampled_forecasts_list = [
+    generate_forecasts(mean_model=False, n_timesteps=N_timesteps)
+    for _ in range(num_samples)
+]
 
 
 # --- Plotting ---
@@ -246,37 +252,39 @@ timesteps_indices = [t // 6 - 1 for t in timesteps_hours]
 all_forecasts_to_plot = []
 for time_idx in timesteps_indices:
     all_forecasts_to_plot.append(ground_truth[time_idx][0, 0, ...].cpu())
-    all_forecasts_to_plot.append(mean_forecasts[time_idx][0, 0, ...].cpu())
-    all_forecasts_to_plot.append(sampled_forecasts[time_idx][0, 0, ...].cpu())
+    for sampled_forecasts in sampled_forecasts_list:
+        all_forecasts_to_plot.append(sampled_forecasts[time_idx][0, 0, ...].cpu())
 
+# %%
 all_data = torch.stack(all_forecasts_to_plot)
 vmin = all_data.min().item()
 vmax = all_data.max().item()
 
 
 fig, axes = plt.subplots(
-    2,
-    8,
-    figsize=(40, 10),
+    num_samples + 1,
+    num_timesteps_to_plot,
+    figsize=(40, 5 * (num_samples + 1)),
     subplot_kw={"projection": ccrs.PlateCarree()},
     gridspec_kw={"hspace": 0.3, "wspace": 0.1},
 )
 
-fig.suptitle("Forecast Rollout", fontsize=20)
+fig.suptitle("Forecast Rollout Comparison", fontsize=20)
 
-# Plot mean forecasts
+# Plot ground truth
 for i, (ax, time_idx) in enumerate(zip(axes[0], timesteps_indices)):
-    forecast = mean_forecasts[time_idx]
-    data = forecast[0, 0, ...].cpu()
+    data = ground_truth[time_idx][0, 0, ...].cpu()
     gp.plot_single(data, ax=ax, show_cbar=False, vmin=vmin, vmax=vmax)
-    ax.set_title(f"Mean model\nT + {timesteps_hours[i]}h")
+    ax.set_title(f"Ground Truth\nT + {timesteps_hours[i]}h")
 
 # Plot sampled forecasts
-for i, (ax, time_idx) in enumerate(zip(axes[1], timesteps_indices)):
-    forecast = sampled_forecasts[time_idx]
-    data = forecast[0, 0, ...].cpu()
-    gp.plot_single(data, ax=ax, show_cbar=False, vmin=vmin, vmax=vmax)
-    ax.set_title(f"Sampled model\nT + {timesteps_hours[i]}h")
+for sample_idx in range(num_samples):
+    for i, (ax, time_idx) in enumerate(zip(axes[sample_idx + 1], timesteps_indices)):
+        forecast = sampled_forecasts_list[sample_idx][time_idx]
+        data = forecast[0, 0, ...].cpu()
+        gp.plot_single(data, ax=ax, show_cbar=False, vmin=vmin, vmax=vmax)
+        ax.set_title(f"Sample {sample_idx + 1}\nT + {timesteps_hours[i]}h")
+
 
 # Add a single colorbar
 fig.subplots_adjust(right=0.9)
@@ -288,3 +296,50 @@ fig.colorbar(mappable, cax=cbar_ax)
 
 
 plt.show()
+
+# %%
+
+N_timesteps = 6
+N_samples = 4
+
+all_forecasts = []
+for _ in range(N_samples):
+    forecasts = generate_forecasts(mean_model=False, n_timesteps=N_timesteps)
+    forecasts = [f[0, 0, ...].cpu() for f in forecasts]
+    all_forecasts.append(torch.stack(forecasts, dim=-1))
+all_forecasts = torch.stack(all_forecasts, dim=-1)
+ground_truth = torch.stack([ds[i][3][..., 0, 0] for i in range(N_timesteps)], dim=-1)
+ground_truth = ground_truth.unsqueeze(-1)
+plottable = torch.cat([ground_truth, all_forecasts], dim=-1)
+# %%
+import matplotlib
+
+from cdnp.plot.geoplot import GeoPlotter
+
+matplotlib.rcParams["mathtext.fontset"] = "custom"
+matplotlib.rcParams["mathtext.rm"] = "Bitstream Vera Sans"
+matplotlib.rcParams["mathtext.it"] = "Bitstream Vera Sans:italic"
+matplotlib.rcParams["mathtext.bf"] = "Bitstream Vera Sans:bold"
+matplotlib.rcParams["mathtext.fontset"] = "stix"
+matplotlib.rcParams["font.family"] = "STIXGeneral"
+
+gp = GeoPlotter(map_width=3, map_height=1.5)
+
+
+fig = gp.plot_grid(
+    data=plottable,
+    row_titles=["Ground Truth"] + [f"Sample {i + 1}" for i in range(N_samples)],
+    col_titles=[f"T + {6 * (i + 1)}h" for i in range(N_timesteps)],
+    share_cmap="col",
+)
+plt.subplots_adjust(
+    wspace=0.1, hspace=0.1
+)  # wspace controls x-direction, hspace controls y-direction
+
+fig.savefig(
+    "forecast_samples.png",
+    dpi=300,
+    bbox_inches="tight",
+)
+
+# %%
