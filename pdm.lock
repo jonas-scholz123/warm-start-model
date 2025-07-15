@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:796fb3e519197bce73f00bc6cae20f11a5f9adbff740bb6986209c64c3f5e2d6"
+content_hash = "sha256:117e023c32a7418452a3b73f923ade0777101172c99e09802ee2620095eb9a2e"
 
 [[metadata.targets]]
 requires_python = ">=3.11.0"
@@ -2550,6 +2550,19 @@ files = [
     {file = "torch-2.7.1-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:30207f672328a42df4f2174b8f426f354b2baa0b7cca3a0adb3d6ab5daf00dc8"},
     {file = "torch-2.7.1-cp313-cp313t-win_amd64.whl", hash = "sha256:79042feca1c634aaf6603fe6feea8c6b30dfa140a6bbc0b973e2260c7e79a22e"},
     {file = "torch-2.7.1-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:988b0cbc4333618a1056d2ebad9eb10089637b659eb645434d0809d8d937b946"},
+]
+
+[[package]]
+name = "torchdiffeq"
+version = "0.2.5"
+summary = ""
+dependencies = [
+    "scipy",
+    "torch",
+]
+files = [
+    {file = "torchdiffeq-0.2.5-py3-none-any.whl", hash = "sha256:aa1db4bed13bd04952f28a53cdf4336d1ab60417c1d9698d7a239fec1cf2bcf8"},
+    {file = "torchdiffeq-0.2.5.tar.gz", hash = "sha256:b50d3760d13fd138dcceac651f4b80396f44fefcebd037a033fecfeaa9cc12e7"},
 ]
 
 [[package]]

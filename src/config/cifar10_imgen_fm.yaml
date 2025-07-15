@@ -1,0 +1,19 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: imgen
+  - model: flow_matching
+  - _self_
+
+execution:
+  train_steps: 300000
+  gradient_clip_norm: 1.0
+
+output:
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 100
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
