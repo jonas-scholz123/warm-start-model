@@ -76,7 +76,11 @@ class Experiment:
             exp.scheduler(optimizer) if exp.scheduler else None
         )
 
-        experiment_path = ExperimentPath.from_config(cfg, Path(cfg.paths.output))
+        if not cfg.execution.resume:
+            experiment_path = ExperimentPath.from_config(cfg, Path(cfg.paths.output))
+        else:
+            path = Path(cfg.paths.output) / cfg.execution.resume
+            experiment_path = ExperimentPath.from_path(path)
 
         logger.info("Experiment path: {}", str(experiment_path))
         checkpoint_manager = CheckpointManager(experiment_path)

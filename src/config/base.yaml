@@ -25,6 +25,9 @@ execution:
   start_from: LATEST
   start_weights: null
   ema_rate: 0.0
+  # Effective batch size is this * trainloader.batch_size
+  accumulate_steps: 1
+  resume: null
 
 output:
   save_checkpoints: true

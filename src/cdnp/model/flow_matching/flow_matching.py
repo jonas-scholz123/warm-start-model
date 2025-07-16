@@ -24,7 +24,7 @@ class CFGScaledModel(ModelWrapper):
                 condition_free = self.model(x, t, extra={})
             result = (1.0 + cfg_scale) * conditional - cfg_scale * condition_free
         else:
-            result = self.model(x, t, extra={"label": label})
+            result = self.model(x, t, extra={})
 
         self.nfe_counter += 1
         return result.to(dtype=torch.float32)
@@ -110,8 +110,6 @@ class FlowMatching(nn.Module):
                 "Conditional flow-matching generation is not yet implemented."
             )
 
-        dummy_labels = torch.zeros(num_samples, dtype=torch.long, device=self.device)
-
         return self.solver.sample(
             time_grid=self.time_grid,
             x_init=x_T,
@@ -122,11 +120,11 @@ class FlowMatching(nn.Module):
             step_size=self.ode_opts["step_size"],
             # TODO remove cfg, not needed
             cfg_scale=0.0,
-            label=dummy_labels,
+            label=None,
         )
 
     def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:
-        return [self.sample(ctx, 4)]
+        return [self.sample(ctx, 12)]
 
 
 def get_time_discretization(nfes: int, rho=7):

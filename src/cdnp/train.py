@@ -304,18 +304,22 @@ class Trainer:
             self.grad_scaler.scale(loss).backward()
             self._log_wandb({"loss": loss.item()}, prefix="train")
 
-        with p.profile("optimizer.step"):
-            clip_norm: float = self.cfg.execution.gradient_clip_norm
-            if clip_norm > 0:
-                self.grad_scaler.unscale_(self.optimizer)
-                grad_norm = nn.utils.clip_grad_norm_(self.model.parameters(), clip_norm)
-                self._log_wandb({"grad_norm": grad_norm})
+        if (self.state.step + 1) % self.cfg.execution.accumulate_steps == 0:
+            with p.profile("optimizer.step"):
+                clip_norm: float = self.cfg.execution.gradient_clip_norm
+                if clip_norm > 0:
+                    self.grad_scaler.unscale_(self.optimizer)
+                    grad_norm = nn.utils.clip_grad_norm_(
+                        self.model.parameters(), clip_norm
+                    )
+                    self._log_wandb({"grad_norm": grad_norm})
 
-            self.grad_scaler.step(self.optimizer)
-            self.optimizer.zero_grad()
-            self.grad_scaler.update()
-            if self.scheduler:
-                self._log_wandb({"lr": self.scheduler.get_last_lr()[0]})
+                self.grad_scaler.step(self.optimizer)
+                self.optimizer.zero_grad()
+                self.grad_scaler.update()
+
+        if self.scheduler:
+            self._log_wandb({"lr": self.scheduler.get_last_lr()[0]})
 
         if self.ema:
             self.ema.update()
