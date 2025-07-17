@@ -42,23 +42,23 @@ For example, to use the `celeba_inpaint_cdnp.yaml` configuration, you would use 
 
 You can override specific configuration settings from the command line. For debugging purposes, you can use `mode=dev`. This will perform a dry run of the training script without executing the actual training loop, which is useful for catching configuration errors.
 
-### Training CDNP Models (Two-Step Process)
+### Training Warm-Start Generative Models (Two-Step Process)
 
-Training a Conditional Denoising Neural Process (CDNP) model is a two-step process:
+Training a Warm-Start Generative Model is a two-step process:
 
-**Step 1: Train a Conditional Neural Process (CNP) model.**
+**Step 1: Train a Warm-Start Model.**
 
-First, you need to train a standard CNP model for the desired task. The weights from this model will be used as a "shortcut" for the CDNP model.
+We initially called warm-start models "cnp" (conditional neural processes), hence the naming.
 
-*Example: Training a CNP for CelebA inpainting:*
+*Example: Training a warm-start model for CelebA inpainting:*
 ```bash
 python src/cdnp/train.py -cn celeba_inpaint_cnp mode=prod
 ```
-The weights will be saved to the directory specified in the configuration (by default in `_weights/<experiment_name>`). For the `CDNP` run, the experiment name from the `CNP` run needs to be provided. For `celeba_inpaint_cnp` this will be `celeba_cnp`.
+The weights will be saved to the directory specified in the configuration (by default in `_output/<experiment_name>/checkpoints`). For the full warm-start diffusion run, you will need to provide the experiment path to the pre-trained warm-start model.
 
-**Step 2: Train the CDNP model.**
+**Step 2: Train the Warm-Start Diffusion model.**
 
-Next, train the CDNP model. The configuration for the CDNP model is set up to load the weights from the corresponding pre-trained CNP model. Make sure the `path` in the CDNP config file points to the correct CNP experiment weights.
+Next, train the full generative model. The configuration for the generative model (we call it CDNP in earlier drafts) is set up to load the weights from the corresponding pre-trained warm-start model. Make sure the `path` in the CDNP config file points to the correct warm-start experiment weights.
 
 For example, in `src/config/celeba_inpaint_cdnp.yaml`:
 ```yaml
@@ -69,34 +69,31 @@ model:
     freeze: true
 ```
 
-*Example: Training a CDNP for CelebA inpainting:*
+*Example: Training a warm-start diffusion model for CelebA inpainting:*
 ```bash
 python src/cdnp/train.py -cn celeba_inpaint_cdnp mode=prod
 ```
 
 ### Debugging Example
 
-To debug the configuration for the CIFAR-10 inpainting task, you can use `mode=dev`. This will initialize the models and data loaders but will not run the training loop.
+To debug, you can use `mode=dev`. This will fast-forward through the training loop to reveal bugs.
 
-First, for the CNP:
-```bash
-python src/cdnp/train.py -cn cifar10_inpaint_cnp mode=dev
-```
-Then, for the CDNP:
+E.g.:
 ```bash
 python src/cdnp/train.py -cn cifar10_inpaint_cdnp mode=dev
 ```
 
 ## Citation
 
-If you find this work useful, please consider citing the paper:
+If you find this work useful, please cite the paper:
 
 ```bibtex
-@article{scholz2024shortcut,
-  title={Shortcut Models Accelerate Generative Modelling},
-  author={Jonas Scholz and Richard E. Turner},
-  year={2025},
-  eprint={TODO},
-  archivePrefix={arXiv},
-  primaryClass={cs.LG}
+@misc{scholz2025warmstarts,
+      title={Warm Starts Accelerate Generative Modelling}, 
+      author={Jonas Scholz and Richard E. Turner},
+      year={2025},
+      eprint={2507.09212},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2507.09212}, 
 }
