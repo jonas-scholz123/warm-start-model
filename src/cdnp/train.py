@@ -229,6 +229,7 @@ class Trainer:
                     self.val_loader,
                     self.preprocess_fn,
                     self.metrics,
+                    self.cfg.output.use_tqdm,
                     self.cfg.execution.dry_run,
                 )
                 self._log_wandb(val_metrics, prefix="val")

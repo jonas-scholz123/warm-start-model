@@ -15,16 +15,16 @@ class CFGScaledModel(ModelWrapper):
         self.nfe_counter = 0
 
     def forward(
-        self, x: torch.Tensor, t: torch.Tensor, cfg_scale: float, label: torch.Tensor
+        self,
+        x: torch.Tensor,
+        t: torch.Tensor,
+        cfg_scale: float,
+        label: torch.Tensor,
+        ctx: ModelCtx,
     ):
         t = torch.zeros(x.shape[0], device=x.device) + t
-        if cfg_scale != 0.0:
-            with torch.cuda.amp.autocast(), torch.no_grad():
-                conditional = self.model(x, t, extra={"label": label})
-                condition_free = self.model(x, t, extra={})
-            result = (1.0 + cfg_scale) * conditional - cfg_scale * condition_free
-        else:
-            result = self.model(x, t, extra={})
+        x = torch.cat([x, ctx.image_ctx], dim=1)
+        result = self.model(x, t, extra={})
 
         self.nfe_counter += 1
         return result.to(dtype=torch.float32)
@@ -81,6 +81,7 @@ class FlowMatching(nn.Module):
 
         path_sample = self.path.sample(t=t, x_0=noise, x_1=trg)
         x_t = path_sample.x_t
+        x_t = torch.cat([x_t, ctx.image_ctx], dim=1)
         u_t = path_sample.dx_t
 
         if ctx.label_ctx:
@@ -121,6 +122,7 @@ class FlowMatching(nn.Module):
             # TODO remove cfg, not needed
             cfg_scale=0.0,
             label=None,
+            ctx=ctx,
         )
 
     def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:

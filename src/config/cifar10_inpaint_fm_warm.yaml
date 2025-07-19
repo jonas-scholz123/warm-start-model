@@ -1,0 +1,41 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: inpaint
+  - model: warm_start
+  - model/generative_model: flow_matching
+  - _self_
+
+execution:
+  train_steps: 300000
+  gradient_clip_norm: 3.0
+  accumulate_steps: 4 # Effective batch size = 512, matching the repo
+  ema_rate: 0.999
+
+output:
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 100
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
+
+model:
+  warm_start_model:
+    _target_: cdnp.util.instantiate.load_model_from_path
+    path: ${paths.weights}/2025-07-17_16-57_clever_fish
+    freeze: true
+  generative_model:
+    backbone:
+      in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
+      out_channels: 3 # RGB image
+
+
+optimizer:
+  lr: 1e-4
+  betas: [0.9, 0.95]
+
+data:
+  trainloader:
+    batch_size: 128

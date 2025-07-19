@@ -53,9 +53,6 @@ rng:
     _target_: torch.Generator
     device: cpu
 
-model:
-  device: ${runtime.device}
-
 optimizer:
   _target_: torch.optim.AdamW
   _partial_: true
