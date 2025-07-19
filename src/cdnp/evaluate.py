@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import torch
 from torch.amp import autocast
 from torch.utils.data.dataloader import DataLoader
-from torcheval.metrics import FrechetInceptionDistance
+from torchmetrics.image.fid import FrechetInceptionDistance
 from tqdm import tqdm
 
 from cdnp.model.cdnp import CDNP
@@ -58,7 +58,9 @@ class FIDMetric(Metric):
     def __init__(
         self, num_samples: int, means: list[int], stds: list[int], device: str
     ):
-        self.fid = FrechetInceptionDistance(feature_dim=2048).to(device)
+        self.fid = FrechetInceptionDistance(normalize=True).to(
+            device, non_blocking=True
+        )
         self.num_samples = num_samples
         self.count = 0
         self.device = device
@@ -74,10 +76,10 @@ class FIDMetric(Metric):
         num_samples = trg.shape[0]
         fake_images = model.sample(ctx, num_samples=num_samples)
         fake_images = unnormalise(fake_images, self.means, self.stds)
-        self.fid.update(fake_images, is_real=False)
+        self.fid.update(fake_images, real=False)
 
         real_images = unnormalise(trg, self.means, self.stds)
-        self.fid.update(real_images, is_real=True)
+        self.fid.update(real_images, real=True)
         self.count += real_images.shape[0]
 
     def compute(self) -> float:
