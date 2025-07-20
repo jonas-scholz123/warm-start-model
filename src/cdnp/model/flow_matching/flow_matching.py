@@ -104,6 +104,9 @@ class FlowMatching(nn.Module):
         :num_samples: Number of samples to generate.
         """
 
+        if ctx.image_ctx is not None:
+            num_samples = ctx.image_ctx.shape[0]
+
         shape = (num_samples, self.num_channels, self.height, self.width)
 
         x_T = torch.randn(*shape).to(self.device)
@@ -127,8 +130,8 @@ class FlowMatching(nn.Module):
             ctx=ctx,
         )
 
-    def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:
-        return [self.sample(ctx, 12)]
+    def make_plot(self, ctx: ModelCtx, num_samples: int = 0) -> list[torch.Tensor]:
+        return [self.sample(ctx, num_samples)]
 
 
 def get_time_discretization(nfes: int, rho=7):

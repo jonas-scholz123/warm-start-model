@@ -2,7 +2,7 @@ defaults:
   - base
   - data: cifar10
   - task: inpaint
-  - model: warm_start_fm
+  - model: flow_matching
   - _self_
 
 execution:
@@ -21,14 +21,9 @@ output:
       device: ${runtime.device}
 
 model:
-  warm_start_model:
-    _target_: cdnp.util.instantiate.load_model_from_path
-    path: ${paths.weights}/cifar10_cnp
-    freeze: true
-  generative_model:
-    backbone:
-      in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
-      out_channels: 3 # RGB image
+  backbone:
+    in_channels: 7 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
+    out_channels: 3 # RGB image
 
 
 optimizer:

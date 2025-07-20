@@ -1,4 +1,7 @@
+defaults: 
+  - /generative_model: flow_matching
+  - _self_
+
 _target_: cdnp.model.warm_start_diffusion.WarmStartDiffusion
 warm_start_model: ???
-generative_model: ???
 std_mult: 1.0
