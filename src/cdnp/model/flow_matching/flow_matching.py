@@ -23,7 +23,8 @@ class CFGScaledModel(ModelWrapper):
         ctx: ModelCtx,
     ):
         t = torch.zeros(x.shape[0], device=x.device) + t
-        x = torch.cat([x, ctx.image_ctx], dim=1)
+        if ctx.image_ctx is not None:
+            x = torch.cat([x, ctx.image_ctx], dim=1)
         result = self.model(x, t, extra={})
 
         self.nfe_counter += 1
@@ -81,7 +82,8 @@ class FlowMatching(nn.Module):
 
         path_sample = self.path.sample(t=t, x_0=noise, x_1=trg)
         x_t = path_sample.x_t
-        x_t = torch.cat([x_t, ctx.image_ctx], dim=1)
+        if ctx.image_ctx is not None:
+            x_t = torch.cat([x_t, ctx.image_ctx], dim=1)
         u_t = path_sample.dx_t
 
         if ctx.label_ctx:
