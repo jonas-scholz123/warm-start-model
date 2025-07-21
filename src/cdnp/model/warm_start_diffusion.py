@@ -58,4 +58,4 @@ class WarmStartDiffusion(nn.Module):
         return samples
 
     def make_plot(self, ctx: ModelCtx, num_samples: int = 0) -> list[torch.Tensor]:
-        return [self.sample(ctx, num_samples)]
+        return [self.sample(ctx, num_samples) for _ in range(4)]
