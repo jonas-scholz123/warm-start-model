@@ -35,7 +35,7 @@ class WarmStartDiffusion(nn.Module):
         return self.generative_model(gen_model_ctx, trg_n)
 
     @torch.no_grad()
-    def sample(self, ctx: ModelCtx, num_samples: int = 0) -> torch.Tensor:
+    def sample(self, ctx: ModelCtx, num_samples: int = 0, **kwargs) -> torch.Tensor:
         """
         Generates samples from the model.
 
@@ -50,7 +50,7 @@ class WarmStartDiffusion(nn.Module):
             image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, prd_dist.stddev], dim=1),
         )
 
-        samples_n = self.generative_model.sample(gen_model_ctx, num_samples)
+        samples_n = self.generative_model.sample(gen_model_ctx, num_samples, **kwargs)
 
         # Go back to unnormalised space
         samples = samples_n * prd_dist.stddev + prd_dist.mean

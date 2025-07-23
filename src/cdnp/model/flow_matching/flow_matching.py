@@ -96,7 +96,7 @@ class FlowMatching(nn.Module):
         return torch.pow(pred_u - u_t, 2).mean()
 
     @torch.no_grad()
-    def sample(self, ctx: ModelCtx, num_samples: int) -> torch.Tensor:
+    def sample(self, ctx: ModelCtx, num_samples: int, **kwargs) -> torch.Tensor:
         """
         Generates samples from the model.
 
@@ -116,8 +116,13 @@ class FlowMatching(nn.Module):
                 "Conditional flow-matching generation is not yet implemented."
             )
 
+        if "nfe" in kwargs and kwargs["nfe"] is not None:
+            time_grid = get_time_discretization(kwargs["nfe"])
+        else:
+            time_grid = self.time_grid
+
         return self.solver.sample(
-            time_grid=self.time_grid,
+            time_grid=time_grid,
             x_init=x_T,
             method=self.ode_method,
             return_intermediates=False,

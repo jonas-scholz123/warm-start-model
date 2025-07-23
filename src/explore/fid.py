@@ -41,11 +41,11 @@ model: CDNP = exp.model
 cm = CheckpointManager(path)
 
 if "ema" in args.model:
-    model_to_load = exp.ema_model.get_shadow()
+    model = exp.ema_model.get_shadow()
 else:
-    model_to_load = model
+    model = model
 
-_ = cm.reproduce_model(model_to_load, args.model)
+_ = cm.reproduce_model(model, args.model)
 
 mean = cfg.data.dataset.norm_means
 std = cfg.data.dataset.norm_stds
@@ -65,7 +65,7 @@ dataloader = StepIterator(
 )
 
 result = evaluate(
-    model=model_to_load,
+    model=model,
     dataloader=dataloader,
     preprocess_fn=exp.preprocess_fn,
     metrics=[metric],

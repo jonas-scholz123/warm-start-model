@@ -59,7 +59,7 @@ class CNP(nn.Module):
         return -prd_dist.log_prob(trg).mean()
 
     @torch.no_grad()
-    def sample(self, ctx: ModelCtx, num_samples: int = 0) -> torch.Tensor:
+    def sample(self, ctx: ModelCtx, num_samples: int = 0, **kwargs) -> torch.Tensor:
         """
         Generates samples from the model.
 

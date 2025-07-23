@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Optional
 
 import torch
 from torch.amp import autocast
@@ -56,7 +57,12 @@ class LossMetric(Metric):
 
 class FIDMetric(Metric):
     def __init__(
-        self, num_samples: int, means: list[int], stds: list[int], device: str
+        self,
+        num_samples: int,
+        means: list[int],
+        stds: list[int],
+        device: str,
+        nfe: Optional[int] = None,
     ):
         self.fid = FrechetInceptionDistance(normalize=True).to(
             device, non_blocking=True
@@ -66,6 +72,7 @@ class FIDMetric(Metric):
         self.device = device
         self.means = torch.tensor(means).view(1, 3, 1, 1).to(device)
         self.stds = torch.tensor(stds).view(1, 3, 1, 1).to(device)
+        self.nfe = nfe
 
     def update(
         self, model: CDNP | DDPM | CNP, ctx: ModelCtx, trg: torch.Tensor
@@ -74,7 +81,7 @@ class FIDMetric(Metric):
             return
 
         num_samples = trg.shape[0]
-        fake_images = model.sample(ctx, num_samples=num_samples)
+        fake_images = model.sample(ctx, num_samples=num_samples, nfe=self.nfe)
         fake_images = unnormalise(fake_images, self.means, self.stds)
         self.fid.update(fake_images, real=False)
 
@@ -89,6 +96,8 @@ class FIDMetric(Metric):
         return result
 
     def name(self) -> str:
+        if self.nfe is not None:
+            return f"fid_nfe={self.nfe}"
         return "fid"
 
 
