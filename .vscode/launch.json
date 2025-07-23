@@ -15,6 +15,18 @@
                 "celeba_inpaint_cdnp",
                 "mode=dev"
             ]
+        },
+        {
+            "name": "CIFAR10 Inpaint Flow Matching Warm Start",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${cwd}/src/cdnp/train.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-cn",
+                "cifar10_inpaint_fm_warm",
+                "mode=dev"
+            ]
         }
     ]
 }

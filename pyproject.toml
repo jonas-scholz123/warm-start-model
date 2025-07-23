@@ -32,7 +32,8 @@ dependencies = [
     "einops>=0.8.1",
     "cartopy>=0.24.1",
     "h5netcdf>=1.6.1",
-    "torcheval>=0.0.7",
+    "torchdiffeq>=0.2.5",
+    "torchmetrics[image]>=1.7.4",
 ]
 requires-python = ">=3.11.0"
 readme = "README.md"

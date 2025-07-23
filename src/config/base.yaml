@@ -25,6 +25,9 @@ execution:
   start_from: LATEST
   start_weights: null
   ema_rate: 0.0
+  # Effective batch size is this * trainloader.batch_size
+  accumulate_steps: 1
+  resume: null
 
 output:
   save_checkpoints: true
@@ -49,9 +52,6 @@ rng:
   cpu_generator:
     _target_: torch.Generator
     device: cpu
-
-model:
-  device: ${runtime.device}
 
 optimizer:
   _target_: torch.optim.AdamW

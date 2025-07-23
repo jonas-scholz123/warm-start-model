@@ -1,0 +1,9 @@
+# This syntax means:
+# / - starting from the root of the config tree
+# generative_model - from the generative_model group, we will make a selection
+# flow_matching - select the flow_matching model from the generative_model group
+# @_here_ - insert the config subtree from generative_model.flow_matching at the current location
+
+defaults:
+  - /generative_model@_here_: flow_matching
+  - _self_

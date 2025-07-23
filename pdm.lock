@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:796fb3e519197bce73f00bc6cae20f11a5f9adbff740bb6986209c64c3f5e2d6"
+content_hash = "sha256:7fa055221b38ee3de04a98ca2fdc146e25a85adf21425d7f1db78a4fb6b02caf"
 
 [[metadata.targets]]
 requires_python = ">=3.11.0"
@@ -596,7 +596,7 @@ summary = ""
 dependencies = [
     "beautifulsoup4",
     "filelock",
-    "requests",
+    "requests[socks]",
     "tqdm",
 ]
 files = [
@@ -1013,6 +1013,20 @@ files = [
     {file = "kiwisolver-1.4.8-cp313-cp313t-musllinux_1_2_s390x.whl", hash = "sha256:577facaa411c10421314598b50413aa1ebcf5126f704f1e5d72d7e4e9f020d90"},
     {file = "kiwisolver-1.4.8-cp313-cp313t-musllinux_1_2_x86_64.whl", hash = "sha256:be4816dc51c8a471749d664161b434912eee82f2ea66bd7628bd14583a833e85"},
     {file = "kiwisolver-1.4.8.tar.gz", hash = "sha256:23d5f023bdc8c7e54eb65f03ca5d5bb25b601eac4d7f1a042888a1f45237987e"},
+]
+
+[[package]]
+name = "lightning-utilities"
+version = "0.14.3"
+summary = ""
+dependencies = [
+    "packaging",
+    "setuptools",
+    "typing-extensions",
+]
+files = [
+    {file = "lightning_utilities-0.14.3-py3-none-any.whl", hash = "sha256:4ab9066aa36cd7b93a05713808901909e96cc3f187ea6fd3052b2fd91313b468"},
+    {file = "lightning_utilities-0.14.3.tar.gz", hash = "sha256:37e2f83f273890052955a44054382c211a303012ee577619efbaa5df9e65e9f5"},
 ]
 
 [[package]]
@@ -2553,15 +2567,64 @@ files = [
 ]
 
 [[package]]
-name = "torcheval"
-version = "0.0.7"
+name = "torch-fidelity"
+version = "0.3.0"
 summary = ""
 dependencies = [
-    "typing-extensions",
+    "numpy",
+    "pillow",
+    "scipy",
+    "torch",
+    "torchvision",
+    "tqdm",
 ]
 files = [
-    {file = "torcheval-0.0.7-py3-none-any.whl", hash = "sha256:20cc34dac7aa9b32f942c8a9f014d1d02098631b6cd0b102c078600577017956"},
-    {file = "torcheval-0.0.7.tar.gz", hash = "sha256:a498dec34137bc66c9cf1adc7353a46c604dd62255884c72dcb4e2e4fc2cd7e9"},
+    {file = "torch_fidelity-0.3.0-py3-none-any.whl", hash = "sha256:d01284825595feb7dc3eae3dc9a0d8ced02be764813a3483f109bc142b52a1d3"},
+    {file = "torch_fidelity-0.3.0.tar.gz", hash = "sha256:3d3e33db98919759cc4f3f24cb27e1e74bdc7c905d90a780630e4e1c18492b66"},
+]
+
+[[package]]
+name = "torchdiffeq"
+version = "0.2.5"
+summary = ""
+dependencies = [
+    "scipy",
+    "torch",
+]
+files = [
+    {file = "torchdiffeq-0.2.5-py3-none-any.whl", hash = "sha256:aa1db4bed13bd04952f28a53cdf4336d1ab60417c1d9698d7a239fec1cf2bcf8"},
+    {file = "torchdiffeq-0.2.5.tar.gz", hash = "sha256:b50d3760d13fd138dcceac651f4b80396f44fefcebd037a033fecfeaa9cc12e7"},
+]
+
+[[package]]
+name = "torchmetrics"
+version = "1.7.4"
+summary = ""
+dependencies = [
+    "lightning-utilities",
+    "numpy",
+    "packaging",
+    "torch",
+]
+files = [
+    {file = "torchmetrics-1.7.4-py3-none-any.whl", hash = "sha256:9298ad0e893b0cf2956bee95b0f7eecdc65205ab84ddb4f6762eff157c240518"},
+    {file = "torchmetrics-1.7.4.tar.gz", hash = "sha256:506a1a5c7c304cd77ba323ca4b009e46b814fd2be9dcf0f4ccc2e5c0f5b4b0c1"},
+]
+
+[[package]]
+name = "torchmetrics"
+version = "1.7.4"
+extras = ["image"]
+summary = ""
+dependencies = [
+    "scipy",
+    "torch-fidelity",
+    "torchmetrics==1.7.4",
+    "torchvision",
+]
+files = [
+    {file = "torchmetrics-1.7.4-py3-none-any.whl", hash = "sha256:9298ad0e893b0cf2956bee95b0f7eecdc65205ab84ddb4f6762eff157c240518"},
+    {file = "torchmetrics-1.7.4.tar.gz", hash = "sha256:506a1a5c7c304cd77ba323ca4b009e46b814fd2be9dcf0f4ccc2e5c0f5b4b0c1"},
 ]
 
 [[package]]
@@ -2794,7 +2857,7 @@ version = "3.0.8"
 summary = ""
 dependencies = [
     "donfig",
-    "numcodecs",
+    "numcodecs[crc32c]",
     "numpy",
     "packaging",
     "typing-extensions",

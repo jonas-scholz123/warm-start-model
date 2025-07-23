@@ -57,7 +57,7 @@ class DDPM(nn.Module):
         return x
 
     @torch.no_grad()
-    def sample(self, ctx: ModelCtx, num_samples: int) -> torch.Tensor:
+    def sample(self, ctx: ModelCtx, num_samples: int, **kwargs) -> torch.Tensor:
         """
         Generates samples from the model.
 

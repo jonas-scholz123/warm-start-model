@@ -1,11 +1,13 @@
 import argparse
 from pathlib import Path
 
+import torch
 from mlbnb.checkpoint import CheckpointManager
 from mlbnb.iter import StepIterator
 from mlbnb.paths import ExperimentPath
+from torchvision.utils import save_image
+from tqdm import tqdm
 
-from cdnp.evaluate import FIDMetric, evaluate
 from cdnp.model.cdnp import CDNP
 from cdnp.util.instantiate import Experiment
 
@@ -28,6 +30,8 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
 exp_path = Path(args.experiment)
 if not exp_path.exists():
     exp_path = Path("./_weights") / args.experiment
@@ -49,26 +53,41 @@ _ = cm.reproduce_model(model, args.model)
 
 mean = cfg.data.dataset.norm_means
 std = cfg.data.dataset.norm_stds
+mean = torch.tensor(mean, device=device)[None, :, None, None]
+std = torch.tensor(std, device=device)[None, :, None, None]
 
-metric = FIDMetric(num_samples=args.num_samples, device="cuda", means=mean, stds=std)
 
 if len(exp.val_loader) < args.num_samples:
     print(
-        f"Validation set is smaller than {args.num_samples} samples, using the training set for FID evaluation."
+        f"Validation set is smaller than {args.num_samples} samples, using the training set for sample generation."
     )
     dataloader = exp.train_loader
 else:
     dataloader = exp.val_loader
 
+batch_size = dataloader.batch_size
 dataloader = StepIterator(
     dataloader, steps=args.num_samples // dataloader.batch_size + 1
 )
 
-result = evaluate(
-    model=model,
-    dataloader=dataloader,
-    preprocess_fn=exp.preprocess_fn,
-    metrics=[metric],
-    use_tqdm=True,
-)
-print(result)
+samples_dir = path / "samples"
+samples_dir.mkdir(parents=True, exist_ok=True)
+
+bar = tqdm(total=args.num_samples, desc="Generating samples", unit="sample")
+
+count = 0
+for batch in dataloader:
+    ctx, trg = exp.preprocess_fn(batch)
+    ctx = ctx.to(device)
+    trg = trg.to(device)
+    samples = model.sample(ctx, num_samples=batch_size)
+    samples = samples * std + mean
+    samples = samples.clamp(0, 1)
+
+    for sample in samples:
+        count += 1
+        bar.update(1)
+        bar.set_postfix({"count": count})
+        if count > args.num_samples:
+            exit(0)
+        save_image(sample, samples_dir / f"samples_{count}.png")

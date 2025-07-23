@@ -74,7 +74,7 @@ class CDNP(nn.Module):
         return nn.functional.mse_loss(pred_noise, noise, reduction="mean")
 
     @torch.no_grad()
-    def sample(self, ctx: ModelCtx, num_samples: int = 0) -> torch.Tensor:
+    def sample(self, ctx: ModelCtx, num_samples: int = 0, **kwargs) -> torch.Tensor:
         """
         Generates samples from the model.
 

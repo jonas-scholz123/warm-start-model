@@ -54,6 +54,8 @@ class ExecutionConfig:
     ema_rate: float
     start_from: Optional[CheckpointOccasion]
     start_weights: Optional[str]
+    accumulate_steps: int
+    resume: Optional[str]
 
 
 @dataclass

@@ -5,7 +5,7 @@ output:
     _target_: cdnp.plot.plotter.ImgenPlotter
     _partial_: true
     device: ${runtime.device}
-    num_samples: 4
+    num_samples: 16
     norm_means: ${data.dataset.norm_means}
     norm_stds: ${data.dataset.norm_stds}
 
