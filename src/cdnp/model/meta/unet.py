@@ -466,6 +466,7 @@ class UNetModel(nn.Module):
     conv_resample: bool = True
     dims: int = 2
     num_classes: Optional[int] = None
+    use_warmth_embedding: bool = False
     use_checkpoint: bool = False
     num_heads: int = 1
     num_head_channels: int = -1
@@ -504,6 +505,13 @@ class UNetModel(nn.Module):
         if self.num_classes is not None:
             self.label_emb = nn.Embedding(
                 self.num_classes + 1, self.time_embed_dim, padding_idx=self.num_classes
+            )
+
+        if self.use_warmth_embedding:
+            self.warmth_embed = nn.Sequential(
+                nn.Linear(self.model_channels, self.time_embed_dim),
+                nn.SiLU(),
+                nn.Linear(self.time_embed_dim, self.time_embed_dim),
             )
 
         ch = input_ch = int(self.channel_mult[0] * self.model_channels)
@@ -693,6 +701,12 @@ class UNetModel(nn.Module):
                 f"Labels have shape {y.shape}, which does not match the batch dimension of the input {x.shape}"
             )
             emb = emb + self.label_emb(y)
+
+        if self.use_warmth_embedding and "warmth" in extra:
+            warmth = extra["warmth"]
+            emb = emb + self.warmth_embed(
+                timestep_embedding(warmth, self.model_channels).to(x)
+            )
 
         h = x
         if "concat_conditioning" in extra:

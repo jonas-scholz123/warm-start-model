@@ -25,7 +25,8 @@
             "args": [
                 "-cn",
                 "cifar10_inpaint_fm_warm",
-                "mode=dev"
+                "mode=dev",
+                "data.trainloader.batch_size=4"
             ]
         }
     ]
