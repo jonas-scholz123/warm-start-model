@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import nn
 from torch.distributions import Normal
@@ -14,25 +16,51 @@ class WarmStartDiffusion(nn.Module):
         self,
         warm_start_model: CNP,
         generative_model: DDPM | FlowMatching,
-        std_mult: float = 1.0,
+        device: str,
+        min_warmth: float = 1.0,
+        max_warmth: float = 1.0,
     ):
         super().__init__()
         self.warm_start_model = warm_start_model
         self.generative_model = generative_model
-        self.std_mult = std_mult
+        self.min_warmth = min_warmth
+        self.max_warmth = max_warmth
+
+        self.scale_warmth = self.min_warmth != self.max_warmth
+        self.device = device
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         prd_dist = self.warm_start_model.predict(ctx)
-        prd_dist = Normal(prd_dist.mean, prd_dist.stddev * self.std_mult)
+        std, warmth = self._get_warm_std(prd_dist.stddev)
 
         # _n suffix = normalised space
-        trg_n = (trg - prd_dist.mean) / prd_dist.stddev
+        trg_n = (trg - prd_dist.mean) / std
 
         gen_model_ctx = ModelCtx(
             image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, prd_dist.stddev], dim=1),
+            warmth=warmth,
         )
 
         return self.generative_model(gen_model_ctx, trg_n)
+
+    def _get_warm_std(
+        self, prd_std: torch.Tensor
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
+        """
+        Get a warmth-scaled standard deviation.
+        """
+        if not self.scale_warmth:
+            return prd_std, None
+        batch_size = prd_std.shape[0]
+        base_std = torch.ones_like(prd_std, device=self.device)
+        warmth = (
+            torch.rand(batch_size, device=self.device)
+            * (self.max_warmth - self.min_warmth)
+            + self.min_warmth
+        )[:, None, None, None]
+
+        scaled_std = warmth * prd_std + (1 - warmth) * base_std
+        return scaled_std, warmth.squeeze()
 
     @torch.no_grad()
     def sample(self, ctx: ModelCtx, num_samples: int = 0, **kwargs) -> torch.Tensor:
@@ -44,10 +72,18 @@ class WarmStartDiffusion(nn.Module):
         # For conditional generation, generate samples based on the context.
         num_samples = ctx.image_ctx.shape[0]
         prd_dist = self.warm_start_model.predict(ctx)
-        prd_dist = Normal(prd_dist.mean, prd_dist.stddev * self.std_mult)
+        prd_dist = Normal(prd_dist.mean, prd_dist.stddev)
+
+        if self.scale_warmth:
+            # During sampling, for now, we use a constant (full) warmth.
+            # TODO: Experiment with different warmth schedules.
+            warmth = torch.ones(num_samples, device=self.device) * self.max_warmth
+        else:
+            warmth = None
 
         gen_model_ctx = ModelCtx(
             image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, prd_dist.stddev], dim=1),
+            warmth=warmth,
         )
 
         samples_n = self.generative_model.sample(gen_model_ctx, num_samples, **kwargs)

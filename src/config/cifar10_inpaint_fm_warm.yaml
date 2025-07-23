@@ -42,6 +42,10 @@ model:
     backbone:
       in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
       out_channels: 3 # RGB image
+      use_warmth_embedding: true
+
+  min_warmth: 0.999
+  max_warmth: 1.0
 
 
 optimizer:

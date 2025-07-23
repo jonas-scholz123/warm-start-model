@@ -6,6 +6,7 @@ from cdnp.model.ctx import ModelCtx
 from cdnp.model.flow_matching.path.affine import CondOTProbPath
 from cdnp.model.flow_matching.solver.ode_solver import ODESolver
 from cdnp.model.flow_matching.utils import ModelWrapper
+from cdnp.model.meta.unet import UNetModel
 
 
 # TODO, get rid of the whole CFG, not needed.
@@ -25,7 +26,11 @@ class CFGScaledModel(ModelWrapper):
         t = torch.zeros(x.shape[0], device=x.device) + t
         if ctx.image_ctx is not None:
             x = torch.cat([x, ctx.image_ctx], dim=1)
-        result = self.model(x, t, extra={})
+
+        extra = {}
+        if ctx.warmth is not None:
+            extra["warmth"] = ctx.warmth
+        result = self.model(x, t, extra=extra)
 
         self.nfe_counter += 1
         return result.to(dtype=torch.float32)
@@ -40,7 +45,7 @@ class CFGScaledModel(ModelWrapper):
 class FlowMatching(nn.Module):
     def __init__(
         self,
-        backbone: nn.Module,
+        backbone: UNetModel,
         skewed_timesteps: bool,
         edm_schedule: bool,
         ode_method: str,
@@ -82,17 +87,24 @@ class FlowMatching(nn.Module):
 
         path_sample = self.path.sample(t=t, x_0=noise, x_1=trg)
         x_t = path_sample.x_t
+
         if ctx.image_ctx is not None:
             x_t = torch.cat([x_t, ctx.image_ctx], dim=1)
+        t = torch.zeros(batch_size, device=self.device) + t
+
+        extra = {}
+        if ctx.warmth is not None:
+            extra["warmth"] = ctx.warmth
+
         u_t = path_sample.dx_t
 
         if ctx.label_ctx:
+            # TODO?
             logger.warning(
                 "Conditional flow-matching generation is not yet implemented."
             )
 
-        # TODO
-        pred_u = self.backbone(x_t, t, extra={})
+        pred_u = self.backbone(x_t, t, extra=extra)
         return torch.pow(pred_u - u_t, 2).mean()
 
     @torch.no_grad()
