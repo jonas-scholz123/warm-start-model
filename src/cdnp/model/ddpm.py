@@ -5,6 +5,7 @@ from torch import nn
 from cdnp.model.ctx import ModelCtx
 
 
+# TODO: Get rid of duplicate code.
 class DDPM(nn.Module):
     def __init__(
         self,
