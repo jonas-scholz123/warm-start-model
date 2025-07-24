@@ -16,6 +16,7 @@ class WarmStartDiffusion(nn.Module):
         self,
         warm_start_model: CNP,
         generative_model: DDPM | FlowMatching,
+        loss_weighting: bool,
         device: str,
         min_warmth: float = 1.0,
         max_warmth: float = 1.0,
@@ -26,7 +27,9 @@ class WarmStartDiffusion(nn.Module):
         self.min_warmth = min_warmth
         self.max_warmth = max_warmth
 
-        self.scale_warmth = self.min_warmth != self.max_warmth
+        self.loss_weighting = loss_weighting
+
+        self.scale_warmth = self.min_warmth != 1.0 or self.max_warmth != 1.0
         self.device = device
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
@@ -41,7 +44,12 @@ class WarmStartDiffusion(nn.Module):
             warmth=warmth,
         )
 
-        return self.generative_model(gen_model_ctx, trg_n)
+        if self.loss_weighting:
+            loss_weight = prd_dist.stddev
+        else:
+            loss_weight = None
+
+        return self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
 
     def _get_warm_std(
         self, prd_std: torch.Tensor

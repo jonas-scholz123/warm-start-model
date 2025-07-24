@@ -7,3 +7,4 @@ device: ${runtime.device}
 warm_start_model: ???
 min_warmth: 1.0
 max_warmth: 1.0
+loss_weighting: false

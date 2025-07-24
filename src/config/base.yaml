@@ -79,3 +79,4 @@ data:
     num_workers: 8
     prefetch_factor: 2
     pin_memory: true
+    persistent_workers: true

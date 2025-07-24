@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from loguru import logger
 from torch import nn
@@ -76,7 +78,9 @@ class FlowMatching(nn.Module):
         else:
             self.time_grid = torch.tensor([0.0, 1.0], device=device)
 
-    def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self, ctx: ModelCtx, trg: torch.Tensor, loss_weight: Optional[torch.Tensor]
+    ) -> torch.Tensor:
         noise = torch.randn_like(trg)
         batch_size = trg.shape[0]
 
@@ -105,7 +109,10 @@ class FlowMatching(nn.Module):
             )
 
         pred_u = self.backbone(x_t, t, extra=extra)
-        return torch.pow(pred_u - u_t, 2).mean()
+        loss = torch.pow(pred_u - u_t, 2)
+        if loss_weight is not None:
+            loss = loss * loss_weight
+        return loss.mean()
 
     @torch.no_grad()
     def sample(self, ctx: ModelCtx, num_samples: int, **kwargs) -> torch.Tensor:
