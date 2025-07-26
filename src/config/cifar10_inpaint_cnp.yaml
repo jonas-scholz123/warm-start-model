@@ -16,7 +16,8 @@ model:
   backbone:
     out_channels: 6 # Predicted RGB mean + predicted RGB stddev
   min_std: 0.1 # Minimum stddev to stabilise
+  device: ${runtime.device}
 
 execution:
-  train_steps: 100000
-  gradient_clip_norm: 40.0
+  train_steps: 200000
+  gradient_clip_norm: 10.0
