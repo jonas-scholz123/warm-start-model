@@ -26,6 +26,12 @@ parser.add_argument(
     default=50_000,
     help="Number of samples for FID evaluation",
 )
+parser.add_argument(
+    "--steps",
+    type=int,
+    default=50,
+    help="Number of ODE steps for sampling",
+)
 args = parser.parse_args()
 
 exp_path = Path(args.experiment)
@@ -50,7 +56,9 @@ _ = cm.reproduce_model(model, args.model)
 mean = cfg.data.dataset.norm_means
 std = cfg.data.dataset.norm_stds
 
-metric = FIDMetric(num_samples=args.num_samples, device="cuda", means=mean, stds=std)
+metric = FIDMetric(
+    num_samples=args.num_samples, device="cuda", means=mean, stds=std, nfe=args.steps
+)
 
 if len(exp.val_loader) < args.num_samples:
     print(

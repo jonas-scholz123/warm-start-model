@@ -52,7 +52,7 @@ class WarmStartDiffusion(nn.Module):
         return self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
 
     def _get_warm_std(
-        self, prd_std: torch.Tensor
+        self, prd_std: torch.Tensor, warmth: Optional[torch.Tensor] = None
     ) -> tuple[torch.Tensor, Optional[torch.Tensor]]:
         """
         Get a warmth-scaled standard deviation.
@@ -61,11 +61,13 @@ class WarmStartDiffusion(nn.Module):
             return prd_std, None
         batch_size = prd_std.shape[0]
         base_std = torch.ones_like(prd_std, device=self.device)
-        warmth = (
-            torch.rand(batch_size, device=self.device)
-            * (self.max_warmth - self.min_warmth)
-            + self.min_warmth
-        )[:, None, None, None]
+        if warmth is None:
+            warmth = (
+                torch.rand(batch_size, device=self.device)
+                * (self.max_warmth - self.min_warmth)
+                + self.min_warmth
+            )
+        warmth = warmth[:, None, None, None]
 
         scaled_std = warmth * prd_std + (1 - warmth) * base_std
         return scaled_std, warmth.squeeze()
@@ -82,10 +84,12 @@ class WarmStartDiffusion(nn.Module):
         prd_dist = self.warm_start_model.predict(ctx)
         prd_dist = Normal(prd_dist.mean, prd_dist.stddev)
 
+        std = prd_dist.stddev
         if self.scale_warmth:
             # During sampling, for now, we use a constant (full) warmth.
             # TODO: Experiment with different warmth schedules.
             warmth = torch.ones(num_samples, device=self.device) * self.max_warmth
+            std, warmth = self._get_warm_std(std, warmth)
         else:
             warmth = None
 
@@ -97,7 +101,7 @@ class WarmStartDiffusion(nn.Module):
         samples_n = self.generative_model.sample(gen_model_ctx, num_samples, **kwargs)
 
         # Go back to unnormalised space
-        samples = samples_n * prd_dist.stddev + prd_dist.mean
+        samples = samples_n * std + prd_dist.mean
 
         return samples
 
