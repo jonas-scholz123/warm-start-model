@@ -14,7 +14,8 @@ class CNP(nn.Module):
         device: str,
         min_std: float = 1e-6,
         residual: bool = False,
-    ):
+    ):  
+        print("DEVICE: ", device)
         super().__init__()
         self.backbone = backbone
         self.device = device
