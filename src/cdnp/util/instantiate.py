@@ -162,6 +162,7 @@ def load_model_from_path(
     # For backward compatibility, merge base config, which contains default values
     cfg = OmegaConf.merge(cfg, base_cfg)
     cfg.runtime = base_cfg.runtime
+    cfg.runtime.device = device
     print("CFG: ", cfg)
     exp: Experiment = Experiment.from_config(cfg)
 
