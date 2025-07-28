@@ -221,6 +221,8 @@ class Trainer:
 
         dry_run = self.cfg.execution.dry_run
 
+        self.model = self.model.to(self.cfg.runtime.device)
+
         for batch in train_iter:
             if self.state.step % self.cfg.output.eval_freq == 0 or dry_run:
                 logger.info("Evaluating on validation set")
