@@ -147,7 +147,10 @@ def load_config(
 
 
 def load_model_from_path(
-    path: Path | ExperimentPath | str, checkpoint: str = "latest", freeze: bool = False
+    path: Path | ExperimentPath | str,
+    checkpoint: str = "latest",
+    freeze: bool = False,
+    device: str = "cuda",
 ) -> Module:
     if isinstance(path, str):
         path = Path(path)

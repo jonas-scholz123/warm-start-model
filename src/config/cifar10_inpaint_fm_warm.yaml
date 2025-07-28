@@ -38,6 +38,7 @@ model:
     _target_: cdnp.util.instantiate.load_model_from_path
     path: ${paths.weights}/cifar10_cnp
     freeze: true
+    device: ${runtime.device}
   generative_model:
     backbone:
       in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev

@@ -11,6 +11,7 @@ model:
     _target_: cdnp.util.instantiate.load_model_from_path
     path: ${paths.weights}/2025-06-02_17-19_kind_bear
     freeze: true # Freeze the trained CNP
+    device: ${runtime.device}
   backbone:
     in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
     out_channels: 3 # RGB image

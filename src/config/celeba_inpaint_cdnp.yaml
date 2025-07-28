@@ -13,6 +13,7 @@ model:
     _target_: cdnp.util.instantiate.load_model_from_path
     path: ${paths.weights}/celeba_cnp
     freeze: true # Freeze the trained CNP
+    device: ${runtime.device}
   backbone:
     in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
     out_channels: 3 # RGB image
