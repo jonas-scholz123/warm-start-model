@@ -165,6 +165,7 @@ def load_model_from_path(
 
     cm = CheckpointManager(path)
     _ = cm.reproduce_model(exp.model, checkpoint)
+    exp.model = exp.model.to(device)
 
     if freeze:
         for param in exp.model.parameters():
