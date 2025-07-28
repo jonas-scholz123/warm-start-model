@@ -42,9 +42,6 @@ class CNP(nn.Module):
         shape = (im_ctx.shape[0],)
         timesteps = torch.zeros(shape).long().to(self.device)
 
-        print("Backbone device: ", self.backbone.device)
-        print("CNP device: ", self.device)
-
         pred = padded_forward(self.backbone, im_ctx, timesteps, class_labels=labels)
 
         mean, std = pred.chunk(2, dim=1)
