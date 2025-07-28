@@ -43,6 +43,7 @@ class CNP(nn.Module):
         timesteps = torch.zeros(shape).long().to(self.device)
 
         print("Backbone device: ", self.backbone.device)
+        print("CNP device: ", self.device)
 
         pred = padded_forward(self.backbone, im_ctx, timesteps, class_labels=labels)
 
