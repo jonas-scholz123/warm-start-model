@@ -163,7 +163,6 @@ def load_model_from_path(
     cfg = OmegaConf.merge(cfg, base_cfg)
     cfg.runtime = base_cfg.runtime
     cfg.runtime.device = device
-    print("CFG: ", cfg)
     exp: Experiment = Experiment.from_config(cfg)
 
     cm = CheckpointManager(path)
