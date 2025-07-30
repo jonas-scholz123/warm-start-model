@@ -12,6 +12,7 @@ execution:
   ema_rate: 0.999
 
 output:
+  eval_freq: 20000
   metrics:
     - _target_: cdnp.evaluate.LossMetric
     - _target_: cdnp.evaluate.FIDMetric
