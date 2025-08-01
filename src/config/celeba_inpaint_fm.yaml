@@ -1,0 +1,49 @@
+defaults:
+  - base
+  - data: celeba
+  - task: inpaint
+  - model: flow_matching
+  - _self_
+
+execution:
+  train_steps: 1000000
+  gradient_clip_norm: 3.0
+  accumulate_steps: 4 # Effective batch size = 512, matching the repo
+  ema_rate: 0.999
+
+output:
+  eval_freq: 20000
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 1000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
+      nfe: 50
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 1000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
+      nfe: 10
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 1000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
+      nfe: 5
+
+model:
+  backbone:
+    in_channels: 7 # noised RGB image + masked RGB input + mask
+    out_channels: 3 # RGB image
+
+optimizer:
+  lr: 1e-4
+  betas: [0.9, 0.95]
+
+data:
+  trainloader:
+    # TODO: Need to adjust number of accumulate steps?
+    batch_size: 32
