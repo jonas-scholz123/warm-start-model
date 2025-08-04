@@ -1,1 +1,2 @@
 _target_: cdnp.model.cnp.CNP
+device: ${runtime.device}

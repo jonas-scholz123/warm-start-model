@@ -79,7 +79,10 @@ class FlowMatching(nn.Module):
             self.time_grid = torch.tensor([0.0, 1.0], device=device)
 
     def forward(
-        self, ctx: ModelCtx, trg: torch.Tensor, loss_weight: Optional[torch.Tensor]
+        self,
+        ctx: ModelCtx,
+        trg: torch.Tensor,
+        loss_weight: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         noise = torch.randn_like(trg)
         batch_size = trg.shape[0]

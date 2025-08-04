@@ -1,8 +1,8 @@
 defaults:
   - base
-  - data: cifar10
+  - data: celeba
   - task: inpaint
-  - model: warm_start_fm
+  - model: flow_matching
   - _self_
 
 execution:
@@ -12,6 +12,7 @@ execution:
   ema_rate: 0.999
 
 output:
+  eval_freq: 20000
   metrics:
     - _target_: cdnp.evaluate.LossMetric
     - _target_: cdnp.evaluate.FIDMetric
@@ -34,20 +35,9 @@ output:
       nfe: 5
 
 model:
-  warm_start_model:
-    _target_: cdnp.util.instantiate.load_model_from_path
-    path: ${paths.weights}/cifar10_cnp
-    freeze: true
-    device: ${runtime.device}
-  generative_model:
-    backbone:
-      in_channels: 13 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
-      out_channels: 3 # RGB image
-      use_warmth_embedding: true
-
-  min_warmth: 0.0
-  max_warmth: 1.0
-
+  backbone:
+    in_channels: 7 # noised RGB image + masked RGB input + mask
+    out_channels: 3 # RGB image
 
 optimizer:
   lr: 1e-4
@@ -55,7 +45,5 @@ optimizer:
 
 data:
   trainloader:
-    batch_size: 128
-  preprocess_fn:
-    min_frac: 0.1
-    max_frac: 0.1
+    # TODO: Need to adjust number of accumulate steps?
+    batch_size: 32
