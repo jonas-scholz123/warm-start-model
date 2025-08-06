@@ -78,7 +78,7 @@ class FlowMatching(nn.Module):
         height: int,
         width: int,
         device: str,
-        epsilon: float = 1e-3,
+        epsilon: float = 1e-2,
     ):
         super().__init__()
         self.skewed_timesteps = skewed_timesteps
