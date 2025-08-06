@@ -16,6 +16,22 @@ from cdnp.sampler.dpm_solver import (
     model_wrapper,
 )
 
+SOLVER_TO_ORDER = {
+    "dopri8": 8,
+    "dopri5": 5,
+    "bosh3": 3,
+    "fehlberg2": 2,
+    "adaptive_heun": 2,
+    "euler": 1,
+    "midpoint": 2,
+    "heun2": 2,
+    "heun3": 3,
+    "rk4": 4,
+    "explicit_adams": 4,
+    "implicit_adams": 4,
+    "scipy_solver": 4,
+}
+
 
 # TODO, get rid of the whole CFG, not needed.
 class CFGScaledModel(ModelWrapper):
@@ -222,12 +238,20 @@ class FlowMatching(nn.Module):
         skip_type: str,
         nfe: int,
     ):
+        order = SOLVER_TO_ORDER[ode_method]
+        if nfe % order != 0:
+            logger.warning(
+                f"Number of steps {nfe} is not divisible by order {order}. "
+                f"NFE is lower than requested. Requested: {nfe}, "
+                f"actual: {nfe // order * order}."
+            )
+        steps = nfe // order
         time_grid = get_time_steps(
             self.noise_schedule,
             skip_type=skip_type,
             t_T=1.0 - self.epsilon,
             t_0=self.epsilon,
-            N=nfe,
+            N=steps,
             device=self.device,
         )
         time_grid = 1 - time_grid  # Convert to FM convention
