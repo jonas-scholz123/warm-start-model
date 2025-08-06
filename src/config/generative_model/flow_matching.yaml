@@ -20,13 +20,13 @@ backbone:
   use_new_attention_order: true
   with_fourier_features: false
 skewed_timesteps: true
-edm_schedule: true
 ode_method: "heun2"
 ode_opts:
   atol: 1e-5
   rtol: 1e-5
   nfe: 50
   step_size: null
+skip_type: "logSNR"
 num_channels: ${data.in_channels}
 height: ${data.height}
 width: ${data.width}
