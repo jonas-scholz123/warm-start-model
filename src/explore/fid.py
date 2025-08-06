@@ -27,10 +27,10 @@ parser.add_argument(
     help="Number of samples for FID evaluation",
 )
 parser.add_argument(
-    "--steps",
+    "--nfe",
     type=int,
     default=50,
-    help="Number of ODE steps for sampling. For dpm_solver_2 and dpm_solver_3, this is the NFE instead.",
+    help="Number of function evaluations for sampling.",
 )
 parser.add_argument(
     "--solver",
@@ -74,7 +74,7 @@ metric = FIDMetric(
     device="cuda",
     means=mean,
     stds=std,
-    nfe=args.steps,
+    nfe=args.nfe,
     ode_method=args.solver,
     skip_type=args.skip_type,
 )
