@@ -1,6 +1,7 @@
 _data/
 _weights/
 _output/
+_backup/
 debug_*
 
 # Byte-compiled / optimized / DLL files
@@ -177,3 +178,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+_output

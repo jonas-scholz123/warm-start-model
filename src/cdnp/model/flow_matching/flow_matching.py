@@ -9,6 +9,28 @@ from cdnp.model.flow_matching.path.affine import CondOTProbPath
 from cdnp.model.flow_matching.solver.ode_solver import ODESolver
 from cdnp.model.flow_matching.utils import ModelWrapper
 from cdnp.model.meta.unet import UNetModel
+from cdnp.sampler.dpm_solver import (
+    DPM_Solver_v3,
+    NoiseScheduleFlowMatch,
+    get_time_steps,
+    model_wrapper,
+)
+
+SOLVER_TO_ORDER = {
+    "dopri8": 8,
+    "dopri5": 5,
+    "bosh3": 3,
+    "fehlberg2": 2,
+    "adaptive_heun": 2,
+    "euler": 1,
+    "midpoint": 2,
+    "heun2": 2,
+    "heun3": 3,
+    "rk4": 4,
+    "explicit_adams": 4,
+    "implicit_adams": 4,
+    "scipy_solver": 4,
+}
 
 
 # TODO, get rid of the whole CFG, not needed.
@@ -49,13 +71,14 @@ class FlowMatching(nn.Module):
         self,
         backbone: UNetModel,
         skewed_timesteps: bool,
-        edm_schedule: bool,
         ode_method: str,
+        skip_type: str,
         ode_opts: dict,
         num_channels: int,
         height: int,
         width: int,
         device: str,
+        epsilon: float = 1e-2,
     ):
         super().__init__()
         self.skewed_timesteps = skewed_timesteps
@@ -63,20 +86,17 @@ class FlowMatching(nn.Module):
         self.path = CondOTProbPath()
         self.cfg_model = CFGScaledModel(backbone)
         self.solver = ODESolver(velocity_model=self.cfg_model)
+        self.noise_schedule = NoiseScheduleFlowMatch()
 
         self.ode_method = ode_method
+        self.skip_type = skip_type
         self.ode_opts = ode_opts
+        self.epsilon = epsilon
 
         self.backbone = backbone
         self.num_channels = num_channels
         self.height = height
         self.width = width
-
-        # TODO: Dependency inject these
-        if edm_schedule:
-            self.time_grid = get_time_discretization(nfes=ode_opts["nfe"])
-        else:
-            self.time_grid = torch.tensor([0.0, 1.0], device=device)
 
     def forward(
         self,
@@ -131,22 +151,115 @@ class FlowMatching(nn.Module):
 
         shape = (num_samples, self.num_channels, self.height, self.width)
 
-        x_T = torch.randn(*shape).to(self.device)
+        gen = kwargs.get("gen", None)
+        x_T = torch.randn(*shape, generator=gen).to(self.device)
 
         if ctx.label_ctx:
             logger.warning(
                 "Conditional flow-matching generation is not yet implemented."
             )
 
-        if "nfe" in kwargs and kwargs["nfe"] is not None:
-            time_grid = get_time_discretization(kwargs["nfe"])
+        nfe = kwargs.get("nfe", self.ode_opts["nfe"])
+        ode_method = kwargs.get("ode_method", self.ode_method)
+        skip_type = kwargs.get("skip_type", self.skip_type)
+
+        if ode_method.startswith("dpm_solver_"):
+            order = int(ode_method.split("_")[-1])
+            return self._sample_dpm_v3(
+                ctx=ctx,
+                x_T=x_T,
+                nfe=nfe,
+                order=order,
+                skip_type=skip_type,
+            )
         else:
-            time_grid = self.time_grid
+            return self._sample_odeint(
+                ctx=ctx,
+                x_T=x_T,
+                ode_method=ode_method,
+                skip_type=skip_type,
+                nfe=nfe,
+            )
+
+    @torch.no_grad()
+    def _sample_dpm_v3(
+        self,
+        ctx: ModelCtx,
+        x_T: torch.Tensor,
+        nfe: int,
+        order: int,
+        skip_type: str,
+    ) -> torch.Tensor:
+        """
+        Generates samples using the provided DPM-Solver v3 implementation.
+        This version is corrected for clarity and accuracy.
+        """
+        solver = DPM_Solver_v3(
+            noise_schedule=self.noise_schedule,
+            steps=nfe,
+            t_start=1.0 - self.epsilon,
+            t_end=self.epsilon,
+            skip_type=skip_type,
+            device=self.device,
+        )
+
+        def _u_conversion(x: torch.Tensor, t: torch.Tensor, cond=None, **kwargs):
+            x = x.to(torch.float32)
+
+            # Sampler uses convention where t=1 is noise, t=0 is data.
+            # FM code uses t=0 for noise, t=1 for data. Therefore, we need to flip the
+            # time variable, and negate the predicted velocity field.
+            t_fm = 1.0 - t
+            return -self.cfg_model(x, t_fm, cfg_scale=0.0, label=None, ctx=ctx)
+
+        wrapped_model_fn = model_wrapper(
+            model=_u_conversion,
+            noise_schedule=self.noise_schedule,
+            model_type="flow_matching",
+            guidance_type="uncond",
+        )
+
+        return solver.sample(
+            x=x_T,
+            model_fn=wrapped_model_fn,
+            order=order,
+            p_pseudo=False,
+            use_corrector=False,
+            c_pseudo=False,
+            lower_order_final=True,
+        )
+
+    @torch.no_grad()
+    def _sample_odeint(
+        self,
+        ctx: ModelCtx,
+        x_T: torch.Tensor,
+        ode_method: str,
+        skip_type: str,
+        nfe: int,
+    ):
+        order = SOLVER_TO_ORDER[ode_method]
+        if nfe % order != 0:
+            logger.warning(
+                f"Number of steps {nfe} is not divisible by order {order}. "
+                f"NFE is lower than requested. Requested: {nfe}, "
+                f"actual: {nfe // order * order}."
+            )
+        steps = nfe // order
+        time_grid = get_time_steps(
+            self.noise_schedule,
+            skip_type=skip_type,
+            t_T=1.0,
+            t_0=0.0,
+            N=steps,
+            device=self.device,
+        )
+        time_grid = 1 - time_grid  # Convert to FM convention
 
         return self.solver.sample(
             time_grid=time_grid,
             x_init=x_T,
-            method=self.ode_method,
+            method=ode_method,
             return_intermediates=False,
             atol=self.ode_opts["atol"],
             rtol=self.ode_opts["rtol"],
@@ -158,21 +271,7 @@ class FlowMatching(nn.Module):
         )
 
     def make_plot(self, ctx: ModelCtx, num_samples: int = 0) -> list[torch.Tensor]:
-        return [self.sample(ctx, num_samples) for _ in range(3)]
-
-
-def get_time_discretization(nfes: int, rho=7):
-    step_indices = torch.arange(nfes, dtype=torch.float64)
-    sigma_min = 0.002
-    sigma_max = 80.0
-    sigma_vec = (
-        sigma_max ** (1 / rho)
-        + step_indices / (nfes - 1) * (sigma_min ** (1 / rho) - sigma_max ** (1 / rho))
-    ) ** rho
-    sigma_vec = torch.cat([sigma_vec, torch.zeros_like(sigma_vec[:1])])
-    time_vec = (sigma_vec / (1 + sigma_vec)).squeeze()
-    t_samples = 1.0 - torch.clip(time_vec, min=0.0, max=1.0)
-    return t_samples
+        return [self.sample(ctx, num_samples) for _ in range(4)]
 
 
 def skewed_timestep_sample(num_samples: int, device: torch.device) -> torch.Tensor:

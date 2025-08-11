@@ -63,6 +63,7 @@ class FIDMetric(Metric):
         stds: list[int],
         device: str,
         nfe: Optional[int] = None,
+        **sample_kwargs,
     ):
         self.fid = FrechetInceptionDistance(normalize=True).to(
             device, non_blocking=True
@@ -73,6 +74,7 @@ class FIDMetric(Metric):
         self.means = torch.tensor(means).view(1, 3, 1, 1).to(device)
         self.stds = torch.tensor(stds).view(1, 3, 1, 1).to(device)
         self.nfe = nfe
+        self.sample_kwargs = sample_kwargs
 
     def update(
         self, model: CDNP | DDPM | CNP, ctx: ModelCtx, trg: torch.Tensor
@@ -81,7 +83,9 @@ class FIDMetric(Metric):
             return
 
         num_samples = trg.shape[0]
-        fake_images = model.sample(ctx, num_samples=num_samples, nfe=self.nfe)
+        fake_images = model.sample(
+            ctx, num_samples=num_samples, nfe=self.nfe, **self.sample_kwargs
+        )
         fake_images = unnormalise(fake_images, self.means, self.stds)
         self.fid.update(fake_images, real=False)
 
