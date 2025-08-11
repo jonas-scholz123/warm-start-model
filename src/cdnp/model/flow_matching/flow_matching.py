@@ -151,7 +151,8 @@ class FlowMatching(nn.Module):
 
         shape = (num_samples, self.num_channels, self.height, self.width)
 
-        x_T = torch.randn(*shape).to(self.device)
+        gen = kwargs.get("gen", None)
+        x_T = torch.randn(*shape, generator=gen).to(self.device)
 
         if ctx.label_ctx:
             logger.warning(
@@ -188,7 +189,6 @@ class FlowMatching(nn.Module):
         nfe: int,
         order: int,
         skip_type: str,
-        epsilon: float = 1e-3,
     ) -> torch.Tensor:
         """
         Generates samples using the provided DPM-Solver v3 implementation.
@@ -249,8 +249,8 @@ class FlowMatching(nn.Module):
         time_grid = get_time_steps(
             self.noise_schedule,
             skip_type=skip_type,
-            t_T=1.0 - self.epsilon,
-            t_0=self.epsilon,
+            t_T=1.0,
+            t_0=0.0,
             N=steps,
             device=self.device,
         )
