@@ -9,9 +9,10 @@ defaults:
 model:
   backbone:
     out_channels: 6 # RGB image * (mean + stddev)
+  min_std: 0.01 # Minimum std to stabilise
   
 execution:
-  train_steps: 3000000
+  train_steps: 5000000
 
 data:
   in_channels: 4 # masked RGB input + mask

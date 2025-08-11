@@ -12,7 +12,7 @@ class CNP(nn.Module):
         self,
         backbone: UNet2DModel,
         device: str,
-        min_std: float = 1e-6,
+        min_std: float,
         residual: bool = False,
     ):
         super().__init__()
