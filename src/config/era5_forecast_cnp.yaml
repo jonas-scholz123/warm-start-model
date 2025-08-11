@@ -14,7 +14,7 @@ model:
     #output_dimension: 164 # T2M mean and std * 82 trg variables
     #output_dimension: 2 # T2M mean and std * 1 trg variable
     out_channels: 2 # T2M mean and std * 1 trg variable
-  min_std: 0.05
+  min_std: 0.01
   
 execution:
   train_steps: 50000
