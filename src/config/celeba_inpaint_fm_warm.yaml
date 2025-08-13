@@ -37,7 +37,7 @@ output:
 model:
   warm_start_model:
     _target_: cdnp.util.instantiate.load_model_from_path
-    path: ${paths.weights}/cifar10_cnp
+    path: ${paths.weights}/celeba_cnp
     freeze: true
     device: ${runtime.device}
   generative_model:

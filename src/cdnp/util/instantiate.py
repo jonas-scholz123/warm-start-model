@@ -156,6 +156,7 @@ def load_model_from_path(
         path = Path(path)
     if isinstance(path, Path):
         path = ExperimentPath.from_path(path)
+    logger.info(f"Loading model from path: {path}")
 
     base_cfg = load_config(config_name="base")
     cfg: Config = path.get_config()
