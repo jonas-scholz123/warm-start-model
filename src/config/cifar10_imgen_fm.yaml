@@ -26,3 +26,6 @@ optimizer:
 data:
   trainloader:
     batch_size: 128
+
+model:
+  skip_type: edm
