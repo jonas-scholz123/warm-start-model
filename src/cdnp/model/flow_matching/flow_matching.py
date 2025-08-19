@@ -249,12 +249,11 @@ class FlowMatching(nn.Module):
         time_grid = get_time_steps(
             self.noise_schedule,
             skip_type=skip_type,
-            t_T=1.0,
-            t_0=0.0,
+            t_T=0.0,
+            t_0=1.0,
             N=steps,
             device=self.device,
         )
-        time_grid = 1 - time_grid  # Convert to FM convention
 
         return self.solver.sample(
             time_grid=time_grid,

@@ -1000,9 +1000,25 @@ def get_time_steps(noise_schedule, skip_type, t_T, t_0, N, device):
             .to(device)
         )
         return t
+    elif skip_type == "edm":
+        return get_edm_time_grid(steps=N)
     else:
         raise ValueError(
             "Unsupported skip_type {}, need to be 'logSNR' or 'time_uniform' or 'time_quadratic'".format(
                 skip_type
             )
         )
+
+
+def get_edm_time_grid(steps: int, rho=7):
+    step_indices = torch.arange(steps, dtype=torch.float64)
+    sigma_min = 0.002
+    sigma_max = 80.0
+    sigma_vec = (
+        sigma_max ** (1 / rho)
+        + step_indices / (steps - 1) * (sigma_min ** (1 / rho) - sigma_max ** (1 / rho))
+    ) ** rho
+    sigma_vec = torch.cat([sigma_vec, torch.zeros_like(sigma_vec[:1])])
+    time_vec = (sigma_vec / (1 + sigma_vec)).squeeze()
+    t_samples = 1.0 - torch.clip(time_vec, min=0.0, max=1.0)
+    return t_samples

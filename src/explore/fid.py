@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 
+import torch
 from mlbnb.checkpoint import CheckpointManager
 from mlbnb.iter import StepIterator
 from mlbnb.paths import ExperimentPath
@@ -47,6 +48,8 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+torch.manual_seed(42)
+
 exp_path = Path(args.experiment)
 if not exp_path.exists():
     exp_path = Path("./_weights") / args.experiment
@@ -77,6 +80,7 @@ metric = FIDMetric(
     nfe=args.nfe,
     ode_method=args.solver,
     skip_type=args.skip_type,
+    warmth=0.0,
 )
 
 dataloader = StepIterator(
