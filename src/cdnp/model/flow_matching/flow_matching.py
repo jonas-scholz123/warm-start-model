@@ -78,6 +78,7 @@ class FlowMatching(nn.Module):
         height: int,
         width: int,
         device: str,
+        # TODO: deprecated
         epsilon: float = 1e-2,
     ):
         super().__init__()
@@ -91,7 +92,7 @@ class FlowMatching(nn.Module):
         self.ode_method = ode_method
         self.skip_type = skip_type
         self.ode_opts = ode_opts
-        self.epsilon = epsilon
+        self.epsilon = 1e-3
 
         self.backbone = backbone
         self.num_channels = num_channels

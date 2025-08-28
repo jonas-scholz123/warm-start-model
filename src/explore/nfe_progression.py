@@ -28,7 +28,7 @@ class Args:
     title: str
     model: str = "latest_ema"
     solver: str = "heun2"
-    skip_type: str = "logSNR"
+    skip_type: str = "time_uniform"
 
 
 # args = Args(experiment="2025-07-23_15-24_sassy_unicorn_better_cnp", model="latest_ema")
@@ -36,12 +36,12 @@ args = [
     Args(
         exp_name="2025-07-21_22-38_playful_xenon",
         title="FM",
-        solver="heun2",
+        solver="midpoint",
     ),
     Args(
         exp_name="2025-07-23_15-24_sassy_unicorn_better_cnp",
         title="Warm FM",
-        solver="heun2",
+        solver="midpoint",
     ),
     Args(
         exp_name="2025-07-21_22-38_playful_xenon",
@@ -54,7 +54,8 @@ args = [
         solver="dpm_solver_3",
     ),
 ]
-nfes = [1, 2, 3, 4, 5, 8, 12, 20, 50]
+# nfes = [1, 2, 3, 4, 5, 8, 12, 20, 50]
+nfes = [2, 4, 6, 8, 12, 20]
 
 root = Path("/home/jonas/Documents/code/denoising-np/_weights")
 
@@ -90,11 +91,13 @@ def generate_samples(args: Args):
     all_samples = []
     for nfe in tqdm(nfes):
         gen.manual_seed(42)  # Set a seed for same noise across iterations.
+
+        solver = "euler" if nfe == 1 else args.solver
         samples = model.sample(
             ctx=ctx,
             x_T=x,
             nfe=nfe,
-            ode_method=args.solver,
+            ode_method=solver,
             skip_type=args.skip_type,
             num_samples=0,  # ignored
             gen=gen,
@@ -116,7 +119,9 @@ for i, arg in enumerate(args):
 fontsize = 12
 idx = 3
 
+count = 0
 for idx in range(samples.shape[0]):
+    count += 1
     fig, axs = plt.subplots(
         len(args),
         len(nfes),
@@ -133,4 +138,6 @@ for idx in range(samples.shape[0]):
                 axs[0, j].set_title(f"NFE: {nfe}", fontsize=fontsize)
         axs[i, 0].set_ylabel(arg.title, rotation=90, fontsize=fontsize)
     plt.show()
+    if count > 10:
+        break
 # %%
