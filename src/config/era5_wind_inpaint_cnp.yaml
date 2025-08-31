@@ -1,0 +1,35 @@
+defaults:
+  - base
+  - data: era5_wind
+  - task: era5_inpaint
+  - model: cnp
+  - model/backbone: no_attention
+  - _self_
+
+model:
+  residual: true
+  backbone:
+    in_channels: 9 # 2 context times * 2 variables + 5 static
+    out_channels: 4 # T2M mean and std * 2 trg variables
+  min_std: 0.01
+  
+execution:
+  train_steps: 5000000
+
+data:
+  trainloader:
+    batch_size: 4
+  testloader:
+    batch_size: 8
+  preprocess_fn:
+    min_frac: 0.05
+    max_frac: 0.3
+
+optimizer:
+  lr: 1e-4
+
+
+output:
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.CnpRmseMetric
