@@ -3,18 +3,18 @@ defaults:
   - data: era5_wind
   - task: forecast
   - model: cnp
-  - model/backbone: big_no_attention
+  - model/backbone: no_attention
   - _self_
 
 model:
   residual: true
   backbone:
-    in_channels: 41 # 2 context times * 2 variables + 5 static + 32 time embeds
+    in_channels: 9 # 2 context times * 2 variables + 5 static
     out_channels: 4 # T2M mean and std * 2 trg variables
   min_std: 0.01
   
 execution:
-  train_steps: 50000
+  train_steps: 5000000
 
 data:
   trainloader:
@@ -24,3 +24,8 @@ data:
 
 optimizer:
   lr: 1e-4
+
+output:
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.CnpRmseMetric
