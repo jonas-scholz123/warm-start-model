@@ -3,7 +3,6 @@ from typing import Callable
 import torch
 
 from cdnp.model.ddpm import ModelCtx
-from cdnp.model.swin.embeddings import TimeEmbedding
 
 PreprocessFn = Callable[
     tuple[torch.Tensor, torch.Tensor], tuple[ModelCtx, torch.Tensor]
@@ -66,17 +65,8 @@ def preprocess_weather_forecast(
     dyn = dyn.permute(0, 3, 1, 2)
     trg = trg.permute(0, 3, 1, 2)
 
-    time_embedding = get_time_embedding(zero_time)
-    time_embedding = time_embedding.expand((-1, -1, lat, lon))
-
     # Have dyn at the end, because it's used as the residual.
 
-    ctx = torch.cat([static, time_embedding, dyn], dim=1)  # (B, static+dyn, lat, lon)
+    ctx = torch.cat([static, dyn], dim=1)  # (B, static+dyn, lat, lon)
 
     return ModelCtx(image_ctx=ctx), trg
-
-
-def get_time_embedding(zero_time: torch.Tensor) -> torch.Tensor:
-    embed_module = TimeEmbedding(num_scales=16)  # (B, 32)
-    embeds = embed_module(zero_time)
-    return embeds[:, :, None, None]
