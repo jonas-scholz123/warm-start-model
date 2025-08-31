@@ -23,7 +23,7 @@ data:
     batch_size: 8
   preprocess_fn:
     min_frac: 0.05
-    max_frac: 0.3
+    max_frac: 0.2
 
 optimizer:
   lr: 1e-4
