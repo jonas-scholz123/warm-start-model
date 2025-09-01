@@ -1,0 +1,6 @@
+# @package _global_
+data:
+  dataset:
+    data_source:
+      path: /scratches/peano_2/em626/otter/_data/era5_240x121.zarr
+    norm_path: /scratches/peano_2/em626/otter/otter/data/normalisation/stats
