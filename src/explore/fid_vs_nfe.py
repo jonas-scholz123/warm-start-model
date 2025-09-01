@@ -5,7 +5,8 @@ import pandas as pd
 path = "/home/jonas/Documents/code/denoising-np/fid_results.csv"
 df = pd.read_csv(path).sort_values(["experiment", "nfe"])
 #df = df[df["solver"] == "dpm_solver_3"]
-# df = df[df["solver"] == "euler"]
+#df = df[df["solver"] == "dpm_solver_2"]
+#df = df[df["solver"] == "euler"]
 # df = df[df["nfe"] >= 2]
 #df = df[df["solver"] == "midpoint"]
 df = df[df["nfe"] % 2 == 0]
@@ -34,11 +35,21 @@ plt.show()
 # %%
 
 df = pd.read_csv(path)
-df = df[df["nfe"] == 20]
+df = df[df["nfe"] == 4]
 df = df[df["experiment"] == "2025-07-23_15-24_sassy_unicorn_better_cnp"].sort_values("fid")
 df.sort_values("fid")
+#%%
 # df[df["experiment"] == "2025-07-21_22-38_playful_xenon"]
 #df[df["experiment"] == "2025-07-23_15-24_sassy_unicorn_better_cnp"].sort_values("fid")
 best_solver = df[df["fid"] == df["fid"].min()]["solver"]
 best_solver
 # %%
+df = pd.read_csv(path)
+df = df[df["nfe"] == 10].sort_values("fid")
+df
+#%%
+
+df = pd.read_csv(path)
+df = df[df["experiment"] == "2025-07-21_22-38_playful_xenon"]
+df = df.sort_values(["nfe", "fid"])
+df.head(50)
