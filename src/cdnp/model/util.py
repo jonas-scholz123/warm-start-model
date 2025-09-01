@@ -22,11 +22,16 @@ def padded_forward(
     padded_height = round_up_to_power_of_two(height)
     padded_width = round_up_to_power_of_two(width)
     if padded_height == height and padded_width == width:
-        return model(x, *args, **kwargs).sample  # ty: ignore
+        result = model(x, *args, **kwargs)  # ty: ignore
+        if isinstance(result, torch.Tensor):
+            return result
+        return result.sample
     padded_x, pad_left, pad_bottom = geopad(
         x.permute(0, 2, 3, 1), padded_height, padded_width
     )
     padded_x = padded_x.permute(0, 3, 1, 2)
-    out = model(padded_x, *args, **kwargs).sample  # ty: ignore
-    out = out[:, :, pad_bottom : pad_bottom + height, pad_left : pad_left + width]
-    return out
+    res = model(padded_x, *args, **kwargs)  # ty: ignore
+    if not isinstance(res, torch.Tensor):
+        res = res.sample
+    res = res[:, :, pad_bottom : pad_bottom + height, pad_left : pad_left + width]
+    return res
