@@ -101,6 +101,8 @@ def preprocess_weather_inpaint(
 
     # Have dyn at the end, because it's used as the residual.
 
-    ctx = torch.cat([static, dyn_masked], dim=1)  # (B, static+dyn, lat, lon)
+    ctx = torch.cat(
+        [mask, static, dyn_masked], dim=1
+    )  # (B, mask+static+dyn+mask, lat, lon)
 
     return ModelCtx(image_ctx=ctx), dyn
