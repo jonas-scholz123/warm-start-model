@@ -9,7 +9,7 @@ dataset:
   start_date: 1979-01-01
   end_date: 2017-12-31
   val_start_date: 2018-01-01
-  val_end_date: 2018-02-01
+  val_end_date: 2018-12-31
   num_context_frames: 2
   num_target_frames: 1
   temporal_resolution_hours: 6
