@@ -9,8 +9,8 @@ defaults:
 model:
   residual: false
   backbone:
-    in_channels: 9 # 2 context times * 2 variables + 5 static
-    out_channels: 4 # T2M mean and std * 2 trg variables
+    in_channels: 7 # 2 variables + 5 static
+    out_channels: 4 # mean and std * 2 trg variables
   min_std: 0.01
   
 execution:
@@ -24,6 +24,9 @@ data:
   preprocess_fn:
     min_frac: 0.05
     max_frac: 0.2
+  dataset:
+    num_context_frames: 1
+    num_target_frames: 0
 
 optimizer:
   lr: 1e-4

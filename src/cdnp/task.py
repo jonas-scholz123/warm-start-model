@@ -78,23 +78,17 @@ def preprocess_weather_inpaint(
     min_frac: float,
     max_frac: float,
 ) -> tuple[ModelCtx, torch.Tensor]:
-    zero_time, static, dyn, trg = batch
+    zero_time, static, dyn, _ = batch
 
     B, lat, lon, time, var = dyn.shape
 
     # For now (no time embeddings), just fold the time dimension into the var dimension.
     dyn = dyn.reshape(B, lat, lon, time * var)
 
-    B, lat, lon, time, var = trg.shape
-    if time > 1:
-        raise NotImplementedError("Only single target time step is supported for now.")
-    trg = trg.reshape(B, lat, lon, time * var)
-
     # Match convention of other datasets to have channels first.
 
     # Convert to (B, time*var, lat, lon)
     dyn = dyn.permute(0, 3, 1, 2)
-    trg = trg.permute(0, 3, 1, 2)
 
     frac = torch.rand(1, generator=gen).item()
     frac = frac * (max_frac - min_frac) + min_frac
@@ -109,4 +103,4 @@ def preprocess_weather_inpaint(
 
     ctx = torch.cat([static, dyn_masked], dim=1)  # (B, static+dyn, lat, lon)
 
-    return ModelCtx(image_ctx=ctx), trg
+    return ModelCtx(image_ctx=ctx), dyn
