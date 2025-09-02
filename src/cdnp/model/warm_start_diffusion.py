@@ -69,6 +69,8 @@ class WarmStartDiffusion(nn.Module):
             )
         warmth = warmth[:, None, None, None]
 
+        prd_std = prd_std.clamp(min=1.0 - warmth)
+
         scaled_std = warmth * prd_std + (1 - warmth) * base_std
         return scaled_std, warmth.squeeze()
 
