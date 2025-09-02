@@ -71,6 +71,7 @@ data:
     prefetch_factor: 2
     pin_memory: true
     persistent_workers: true
+    drop_last: true
   testloader:
     _target_: torch.utils.data.DataLoader
     _partial_: true
@@ -80,3 +81,4 @@ data:
     prefetch_factor: 2
     pin_memory: true
     persistent_workers: true
+    drop_last: true
