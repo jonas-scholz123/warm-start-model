@@ -2,18 +2,14 @@ defaults:
   - base
   - data: era5_wind
   - task: forecast
-  - model: flow_matching_no_attention
+  - model: warm_start_fm_no_attention
   - _self_
-
-model:
-  backbone:
-    in_channels: 15 # 2 context times * 2 variables + 5 static + 2 random noise + 2 means + 2 stds
-    out_channels: 2 # 2 v-fields
 
 model:
   warm_start_model:
     _target_: cdnp.util.instantiate.load_model_from_path
-    path: ${paths.weights}/wind_forecasting_cnp
+    path: ${paths.weights}/wind_forecast_cnp
+    checkpoint: best
     freeze: true
     device: ${runtime.device}
   generative_model:
