@@ -1,0 +1,32 @@
+defaults:
+  - base
+  - data: era5_wind
+  - task: era5_inpaint
+  - model: flow_matching_no_attention
+  - _self_
+
+model:
+  backbone:
+    in_channels: 10 # 2 variables + 5 static + 2 random noise + mask
+    out_channels: 2 # 2 v-fields
+  
+execution:
+  train_steps: 3000000
+  gradient_clip_norm: 3.0
+  ema_rate: 0.999
+
+data:
+  trainloader:
+    batch_size: 4
+  testloader:
+    batch_size: 8
+  preprocess_fn:
+    min_frac: 0.1
+    max_frac: 0.1
+  dataset:
+    num_context_frames: 1
+    num_target_frames: 0
+
+optimizer:
+  lr: 1e-4
+  betas: [0.9, 0.95]
