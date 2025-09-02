@@ -40,12 +40,12 @@ class WarmStartDiffusion(nn.Module):
         trg_n = (trg - prd_dist.mean) / std
 
         gen_model_ctx = ModelCtx(
-            image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, prd_dist.stddev], dim=1),
+            image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, std], dim=1),
             warmth=warmth,
         )
 
         if self.loss_weighting:
-            loss_weight = prd_dist.stddev
+            loss_weight = std
         else:
             loss_weight = None
 
@@ -88,13 +88,14 @@ class WarmStartDiffusion(nn.Module):
         if self.scale_warmth:
             # During sampling, for now, we use a constant (full) warmth.
             # TODO: Experiment with different warmth schedules.
-            warmth = torch.ones(num_samples, device=self.device) * self.max_warmth
+            # TODO: Hardcoded 0.9
+            warmth = torch.ones(num_samples, device=self.device) * self.max_warmth * 0.9
             std, warmth = self._get_warm_std(std, warmth)
         else:
             warmth = None
 
         gen_model_ctx = ModelCtx(
-            image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, prd_dist.stddev], dim=1),
+            image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, std], dim=1),
             warmth=warmth,
         )
 
