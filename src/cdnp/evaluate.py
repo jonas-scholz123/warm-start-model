@@ -105,6 +105,29 @@ class FIDMetric(Metric):
         return "fid"
 
 
+class CnpRmseMetric(Metric):
+    def __init__(self):
+        self.rmse = 0.0
+        self.count = 0
+
+    def update(
+        self, model: CDNP | DDPM | CNP, ctx: ModelCtx, trg: torch.Tensor
+    ) -> None:
+        assert isinstance(model, CNP), "Model must be a CNP"
+        pred = model.predict(ctx).mean
+        self.rmse += torch.sqrt(torch.mean((pred - trg) ** 2)).item()  # ty:ignore
+        self.count += 1
+
+    def compute(self) -> float:
+        result = self.rmse / self.count
+        self.rmse = 0.0
+        self.count = 0
+        return result
+
+    def name(self) -> str:
+        return "cnp_rmse"
+
+
 @torch.no_grad()
 def evaluate(
     model: CDNP | DDPM | CNP,

@@ -1,0 +1,10 @@
+defaults: 
+  - /generative_model: flow_matching_no_attention
+  - _self_
+
+_target_: cdnp.model.warm_start_diffusion.WarmStartDiffusion
+device: ${runtime.device}
+warm_start_model: ???
+min_warmth: 0.0
+max_warmth: 1.0
+loss_weighting: false

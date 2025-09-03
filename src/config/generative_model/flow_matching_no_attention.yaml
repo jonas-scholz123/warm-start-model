@@ -1,0 +1,33 @@
+_target_: cdnp.model.flow_matching.flow_matching.FlowMatching
+backbone:
+  _target_: cdnp.model.meta.unet.UNetModel
+  in_channels: ${data.in_channels}
+  out_channels: ${data.in_channels}
+  model_channels: 128
+  num_res_blocks: 2
+  attention_resolutions: []
+  dropout: 0.3
+  channel_mult: [2, 2, 2]
+  conv_resample: false
+  dims: 2
+  num_classes: ${data.num_classes}
+  use_checkpoint: false
+  num_heads: 1
+  num_head_channels: -1
+  num_heads_upsample: -1
+  use_scale_shift_norm: true
+  resblock_updown: false
+  use_new_attention_order: true
+  with_fourier_features: false
+skewed_timesteps: true
+ode_method: "dpm_solver_3"
+ode_opts:
+  atol: 1e-5
+  rtol: 1e-5
+  nfe: 50
+  step_size: null
+skip_type: "logSNR"
+num_channels: ${data.in_channels}
+height: ${data.height}
+width: ${data.width}
+device: ${runtime.device}

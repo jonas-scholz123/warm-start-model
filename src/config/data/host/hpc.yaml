@@ -1,0 +1,6 @@
+# @package _global_
+data:
+  dataset:
+    data_source:
+      path: /rds/project/rds-dHudQI6NhiE/otter/data/era5_240x121.zarr
+    norm_path: /rds/project/rds-dHudQI6NhiE/otter/data/normalisation/stats

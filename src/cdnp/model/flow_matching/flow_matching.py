@@ -9,6 +9,7 @@ from cdnp.model.flow_matching.path.affine import CondOTProbPath
 from cdnp.model.flow_matching.solver.ode_solver import ODESolver
 from cdnp.model.flow_matching.utils import ModelWrapper
 from cdnp.model.meta.unet import UNetModel
+from cdnp.model.util import padded_forward
 from cdnp.sampler.dpm_solver import (
     DPM_Solver_v3,
     NoiseScheduleFlowMatch,
@@ -54,7 +55,7 @@ class CFGScaledModel(ModelWrapper):
         extra = {}
         if ctx.warmth is not None:
             extra["warmth"] = ctx.warmth
-        result = self.model(x, t, extra=extra)
+        result = padded_forward(self.model, x, t, extra=extra)
 
         self.nfe_counter += 1
         return result.to(dtype=torch.float32)
@@ -132,7 +133,7 @@ class FlowMatching(nn.Module):
                 "Conditional flow-matching generation is not yet implemented."
             )
 
-        pred_u = self.backbone(x_t, t, extra=extra)
+        pred_u = padded_forward(self.backbone, x_t, t, extra=extra)
         loss = torch.pow(pred_u - u_t, 2)
         if loss_weight is not None:
             loss = loss * loss_weight

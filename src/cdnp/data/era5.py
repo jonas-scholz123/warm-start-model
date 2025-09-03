@@ -251,7 +251,6 @@ class GriddedWeatherTask(
     ):
         super().__init__()
         assert num_context_frames > 0
-        assert num_target_frames > 0
 
         # Start and end dates that will be used to form training tasks,
         # i.e. no tasks will contain data outside of this range.

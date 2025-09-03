@@ -58,3 +58,6 @@ data:
   trainloader:
     # TODO: Need to adjust number of accumulate steps?
     batch_size: 32
+  preprocess_fn:
+    min_frac: 0.05
+    max_frac: 0.05

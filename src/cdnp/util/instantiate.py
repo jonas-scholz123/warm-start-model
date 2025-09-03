@@ -159,9 +159,9 @@ def load_model_from_path(
     logger.info(f"Loading model from path: {path}")
 
     base_cfg = load_config(config_name="base")
-    cfg: Config = path.get_config()
+    cfg: Config = path.get_config()  # ty: ignore
     # For backward compatibility, merge base config, which contains default values
-    cfg = OmegaConf.merge(cfg, base_cfg)
+    cfg = OmegaConf.merge(cfg, base_cfg)  # ty: ignore
     cfg.runtime = base_cfg.runtime
     cfg.runtime.device = device
     exp: Experiment = Experiment.from_config(cfg)

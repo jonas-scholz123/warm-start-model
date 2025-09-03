@@ -1,0 +1,42 @@
+defaults:
+  - base
+  - data: era5_wind
+  - task: era5_inpaint
+  - model: warm_start_fm_no_attention
+  - _self_
+
+model:
+  warm_start_model:
+    _target_: cdnp.util.instantiate.load_model_from_path
+    path: ${paths.weights}/wind_inpaint_cnp
+    checkpoint: best
+    freeze: true
+    device: ${runtime.device}
+  generative_model:
+    backbone:
+      in_channels: 14 # 2 variables + 5 static + 2 random noise + 2 means + 2 stds + mask
+      out_channels: 2 # 2 v-fields
+      use_warmth_embedding: true
+  min_warmth: 0.0
+  max_warmth: 1.0
+  
+execution:
+  train_steps: 3000000
+  gradient_clip_norm: 3.0
+  ema_rate: 0.999
+
+data:
+  trainloader:
+    batch_size: 4
+  testloader:
+    batch_size: 8
+  preprocess_fn:
+    min_frac: 0.1
+    max_frac: 0.1
+  dataset:
+    num_context_frames: 1
+    num_target_frames: 0
+
+optimizer:
+  lr: 1e-4
+  betas: [0.9, 0.95]
