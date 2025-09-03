@@ -232,6 +232,7 @@ class Trainer:
                     self.cfg.output.use_tqdm,
                     self.cfg.execution.dry_run,
                 )
+                logger.info("Validation metrics: {}", val_metrics)
                 self._log_wandb(val_metrics, prefix="val")
                 s.val_loss = val_metrics["loss"]
                 if s.val_loss < s.best_val_loss:
