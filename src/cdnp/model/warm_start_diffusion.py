@@ -107,12 +107,13 @@ class WarmStartDiffusion(nn.Module):
         prd_dist = self.warm_start_model.predict(ctx)
         prd_dist = Normal(prd_dist.mean, prd_dist.stddev)
 
+        initial_warmth = kwargs.get("warmth", self.max_warmth)
+
         std = prd_dist.stddev
         if self.scale_warmth:
             # During sampling, for now, we use a constant (full) warmth.
             # TODO: Experiment with different warmth schedules.
-            # TODO: Hardcoded 0.9
-            warmth = torch.ones(num_samples, device=self.device) * self.max_warmth * 0.9
+            warmth = torch.ones(num_samples, device=self.device) * initial_warmth
             std, warmth = self._get_warm_std(std, warmth)
         else:
             warmth = None
