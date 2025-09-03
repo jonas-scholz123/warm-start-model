@@ -1,0 +1,6 @@
+defaults:
+  - cifar10_inpaint_fm_warm
+  - _self_
+
+model:
+  mean_only_ablation: true

@@ -1,0 +1,9 @@
+defaults:
+  - cifar10_inpaint_fm_warm
+  - _self_
+
+model:
+  feature_only_ablation: true
+  min_warmth: 1.0
+  max_warmth: 1.0
+  min_std: 0.1
