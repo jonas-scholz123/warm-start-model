@@ -41,6 +41,12 @@ if __name__ == "__main__":
         choices=["logSNR", "time_uniform", "time_quadratic", "edm"],
         help="Skip type for ODE sampling",
     )
+    parser.add_argument(
+        "--warmth",
+        type=float,
+        default=1.0,
+        help="Initial warmth in warm start diffusion.",
+    )
     args = parser.parse_args()
 
     torch.manual_seed(42)
