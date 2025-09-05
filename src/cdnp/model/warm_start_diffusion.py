@@ -18,7 +18,7 @@ class WarmStartDiffusion(nn.Module):
         generative_model: DDPM | FlowMatching,
         loss_weighting: bool,
         device: str,
-        min_std: float,
+        min_std: float = 0.01,
         min_warmth: float = 1.0,
         max_warmth: float = 1.0,
         mean_only_ablation: bool = False,
