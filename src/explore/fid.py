@@ -58,6 +58,7 @@ if __name__ == "__main__":
         nfe=args.nfe,
         solver=args.solver,
         skip_type=args.skip_type,
+        warmth=args.warmth,
     )
 
     print("Args:", args)
