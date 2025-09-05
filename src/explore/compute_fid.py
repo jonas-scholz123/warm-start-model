@@ -19,6 +19,7 @@ def compute_fid(
     nfe: int,
     solver: str | None,
     skip_type: str,
+    warmth: float = 1.0,
 ):
     """Computes the FID score for a given experiment and model."""
     torch.manual_seed(42)
@@ -50,7 +51,7 @@ def compute_fid(
         nfe=nfe,
         ode_method=solver,
         skip_type=skip_type,
-        warmth=0.0,
+        warmth=warmth,
     )
 
     dataloader = StepIterator(
