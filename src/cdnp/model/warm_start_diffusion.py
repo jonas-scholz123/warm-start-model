@@ -107,7 +107,7 @@ class WarmStartDiffusion(nn.Module):
         prd_dist = self.warm_start_model.predict(ctx)
         prd_dist = Normal(prd_dist.mean, prd_dist.stddev)
 
-        initial_warmth = kwargs.get("warmth", self.max_warmth)
+        initial_warmth = kwargs.get("warmth", self._get_sample_warmth(kwargs))
 
         std = prd_dist.stddev
         if self.scale_warmth:
@@ -136,6 +136,15 @@ class WarmStartDiffusion(nn.Module):
         samples = samples_n * std + prd_dist.mean
 
         return samples
+
+    def _get_sample_warmth(self, **kwargs) -> float:
+        if "nfe" not in kwargs:
+            return self.max_warmth
+        nfe = kwargs["nfe"]
+        if nfe <= 10:
+            return self.max_warmth
+        # For higher NFE, allow the generative model a bit more freedom.
+        return 0.8 * (self.max_warmth - self.min_warmth)
 
     def make_plot(self, ctx: ModelCtx, num_samples: int = 0) -> list[torch.Tensor]:
         return [self.sample(ctx, num_samples) for _ in range(4)]
