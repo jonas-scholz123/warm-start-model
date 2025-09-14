@@ -1,3 +1,4 @@
+# %%
 from itertools import product
 from pathlib import Path
 
@@ -20,9 +21,10 @@ def compute_fid(
     solver: str | None,
     skip_type: str,
     warmth: float = 1.0,
+    seed: int = 42,
 ):
     """Computes the FID score for a given experiment and model."""
-    torch.manual_seed(42)
+    torch.manual_seed(seed)
     exp_path = Path(experiment)
     if not exp_path.exists():
         exp_path = Path("./_weights") / experiment
@@ -71,14 +73,15 @@ def compute_fid(
 
 if __name__ == "__main__":
     experiments = [
-        "2025-07-21_22-38_playful_xenon",
-        "2025-07-23_15-24_sassy_unicorn_better_cnp",
+        # "2025-07-21_22-38_playful_xenon",
+        # "2025-07-23_15-24_sassy_unicorn_better_cnp",
+        "new_warmth_scaling",
     ]
-    nfes = [1, 2, 3, 4, 5, 6, 8, 12, 20, 50, 100]
+    nfes = [10, 12, 20, 50, 100]
     model = "latest_ema"
-    solvers = ["euler", "dpm_solver_3", "midpoint"]
-    default_skip_type = "time_uniform"
-    num_samples = 1000
+    solvers = ["dpm_solver_3"]
+    default_skip_type = "logSNR"
+    num_samples = 50_000
 
     all_args = []
 
@@ -105,6 +108,10 @@ if __name__ == "__main__":
             skip_type = "time_uniform"
         else:
             skip_type = default_skip_type
+
+        if nfe == 1 and solver == "midpoint":
+            # Can't do midpoint with 1 step
+            continue
 
         # Check if the current combination already exists
         exists = (

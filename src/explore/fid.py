@@ -1,7 +1,5 @@
 import argparse
 
-import torch
-
 from explore.compute_fid import compute_fid
 
 if __name__ == "__main__":
@@ -47,9 +45,13 @@ if __name__ == "__main__":
         default=1.0,
         help="Initial warmth in warm start diffusion.",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility",
+    )
     args = parser.parse_args()
-
-    torch.manual_seed(42)
 
     result = compute_fid(
         experiment=args.experiment,
@@ -59,6 +61,7 @@ if __name__ == "__main__":
         solver=args.solver,
         skip_type=args.skip_type,
         warmth=args.warmth,
+        seed=args.seed,
     )
 
     print("Args:", args)
