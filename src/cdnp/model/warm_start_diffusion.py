@@ -137,7 +137,7 @@ class WarmStartDiffusion(nn.Module):
 
         return samples
 
-    def _get_sample_warmth(self, **kwargs) -> float:
+    def _get_sample_warmth(self, kwargs) -> float:
         if "nfe" not in kwargs:
             return self.max_warmth
         nfe = kwargs["nfe"]
