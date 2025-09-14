@@ -1,55 +1,170 @@
 # %%
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import pandas as pd
 
-path = "/home/jonas/Documents/code/denoising-np/fid_results.csv"
+results_dir = Path("/home/jonas/Documents/code/denoising-np/_results/")
+path = results_dir / "fid_results.csv"
+
+name_map = {
+    "2025-07-21_22-38_playful_xenon": "Flow Matching",
+    "new_warmth_scaling": "Warm Flow Matching",
+    # "mean_only_continuation": "Mean Only",
+    # "2025-07-30_18-12_optimistic_narwhal": "No Warmth Blending",
+}
+
+
+def plot_fid_vs_nfe(
+    df: pd.DataFrame,
+    ax: plt.Axes,
+    name_map: dict[str, str],
+    ylim_top: float | None = 8.0,
+    xscale: str = "log",
+    title: str = "",
+    legend: bool = False,
+    **plot_kwargs,
+):
+    """
+    Plots Fréchet Inception Distance (FID) vs. Number of Function Evaluations (NFE)
+    from a pre-filtered DataFrame.
+
+    Args:
+        df (pd.DataFrame): A pre-filtered DataFrame containing the data to plot. It must
+                           include 'experiment', 'nfe', and 'fid' columns.
+        ax (plt.Axes): The matplotlib axes object to plot on.
+        name_map (Dict[str, str]): A dictionary mapping experiment IDs from the DataFrame
+                                   to human-readable names for the legend.
+        ylim_top (Optional[float]): The upper limit for the y-axis.
+        xscale (str): The scale for the x-axis (e.g., 'log', 'linear').
+        xlabel (str): The label for the x-axis.
+        ylabel (str): The label for the y-axis.
+        **plot_kwargs: Additional keyword arguments passed directly to ax.plot().
+                       For example, marker='x', linestyle='--'.
+    """
+    df = df.copy()
+    # The function now assumes `df` is already prepared.
+    # It will plot data for any experiment ID found in the keys of `name_map`.
+    for experiment_id, experiment_name in name_map.items():
+        sub_df = df[df["experiment"] == experiment_id]
+
+        if sub_df.empty:
+            print(
+                f"Warning: No data found for experiment '{experiment_id}' in the provided DataFrame."
+            )
+            continue
+
+        # Find the minimum FID for each NFE using groupby
+        min_fids_by_nfe = sub_df.groupby("nfe")["fid"].min()
+
+        ax.plot(
+            min_fids_by_nfe.index,
+            min_fids_by_nfe.values,
+            label=experiment_name,
+            **plot_kwargs,
+        )
+
+    # --- Configure the plot aesthetics ---
+    ax.set_xscale(xscale)
+    ax.set_xlabel("NFE")
+    ax.set_title(title)
+
+    if ylim_top:
+        ax.set_ylim(top=ylim_top)
+
+    # Set ticks to be the actual NFE values present in the final data
+    all_nfes = sorted(df["nfe"].unique())
+
+    nfes_excl_10 = [nfe for nfe in all_nfes if nfe != 10]
+    ax.set_xticks(ticks=nfes_excl_10, labels=nfes_excl_10)
+    ax.xaxis.minorticks_off()
+
+    if legend:
+        ax.legend()
+
+
 df = pd.read_csv(path).sort_values(["experiment", "nfe"])
-#df = df[df["solver"] == "dpm_solver_3"]
-#df = df[df["solver"] == "dpm_solver_2"]
-#df = df[df["solver"] == "euler"]
+df = df[df["num_samples"] == 50000]
+df = df[df["experiment"].isin(name_map.keys())]
+# df = df[df["solver"] == "dpm_solver_3"]
+# df = df[df["solver"] == "dpm_solver_2"]
+# df = df[df["solver"] == "euler"]
 # df = df[df["nfe"] >= 2]
-#df = df[df["solver"] == "midpoint"]
+# df = df[df["solver"] == "midpoint"]
 df = df[df["nfe"] % 2 == 0]
 
-experiments = df["experiment"].unique().tolist()
+fig, axs = plt.subplots(1, 3, figsize=(8, 3.5), sharey=True, tight_layout=True)
+plot_fid_vs_nfe(
+    df[df["solver"] == "midpoint"],
+    axs[0],
+    name_map,
+    title="Midpoint",
+    marker="x",
+    linestyle="--",
+)
+plot_fid_vs_nfe(
+    df[df["solver"] == "dpm_solver_3"],
+    axs[1],
+    name_map,
+    title="DPM Solver 3",
+    marker="x",
+    linestyle="--",
+)
+plot_fid_vs_nfe(
+    df,
+    axs[2],
+    name_map,
+    title="Best",
+    marker="x",https://wandb.ai/jonas-scholz/cdnp/workspace?nw=nwuserjonasscholz
+    linestyle="--",
+    legend=True,
+)
 
-for experiment in experiments:
-    sub_df = df[df["experiment"] == experiment]
-    nfes = sub_df["nfe"].unique()
+axs[0].set_ylabel("FID")
+fig.savefig(results_dir / "fid_vs_nfe_cifar_all_samplers.pdf", bbox_inches="tight")
 
-    fids = []
-    for nfe in nfes:
-        fid = sub_df[sub_df["nfe"] == nfe]["fid"].min()
-        fids.append(fid)
+fig, ax = plt.subplots(1, 1, figsize=(4, 4), tight_layout=True)
+plot_fid_vs_nfe(
+    df,
+    ax,
+    name_map,
+    title="CIFAR-10",
+    marker="x",
+    linestyle="--",
+    legend=True,
+)
+ax.set_ylabel("FID")
+fig.savefig(results_dir / "fid_vs_nfe_cifar_best.pdf", bbox_inches="tight")
 
-    plt.plot(nfes, fids, marker="x", label=experiment, linestyle="--")
 
-plt.xscale("log")
-plt.xticks(ticks=nfes, labels=nfes)
-plt.xlabel("Number of Function Evaluations (NFE)")
-plt.ylabel("Fréchet Inception Distance (FID)")
-plt.minorticks_off()
-plt.title("FID vs NFE")
-plt.legend()
-plt.show()
+# %%
 # %%
 
 df = pd.read_csv(path)
 df = df[df["nfe"] == 4]
-df = df[df["experiment"] == "2025-07-23_15-24_sassy_unicorn_better_cnp"].sort_values("fid")
+df = df[df["experiment"] == "2025-07-23_15-24_sassy_unicorn_better_cnp"].sort_values(
+    "fid"
+)
 df.sort_values("fid")
-#%%
+# %%
 # df[df["experiment"] == "2025-07-21_22-38_playful_xenon"]
-#df[df["experiment"] == "2025-07-23_15-24_sassy_unicorn_better_cnp"].sort_values("fid")
-best_solver = df[df["fid"] == df["fid"].min()]["solver"]
-best_solver
+nfes = df["nfe"].unique()
+best_solvers = {}
+for nfe in nfes:
+    sub_df = df[df["experiment"] == "new_warmth_scaling"].sort_values("fid")
+    sub_df = sub_df[sub_df["nfe"] == nfe]
+    best_solver = sub_df[sub_df["fid"] == sub_df["fid"].min()]["solver"]
+    best_solvers[int(nfe)] = best_solver.values[0]
+best_solvers
 # %%
 df = pd.read_csv(path)
 df = df[df["nfe"] == 10].sort_values("fid")
 df
-#%%
+# %%
 
 df = pd.read_csv(path)
 df = df[df["experiment"] == "2025-07-21_22-38_playful_xenon"]
 df = df.sort_values(["nfe", "fid"])
 df.head(50)
+# %%
+df

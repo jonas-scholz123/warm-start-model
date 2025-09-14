@@ -19,3 +19,8 @@ data:
   preprocess_fn:
     min_frac: 0.03
     max_frac: 0.1
+
+output:
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.CnpRmseMetric
