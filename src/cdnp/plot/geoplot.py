@@ -37,13 +37,11 @@ class GeoPlotter:
     def __init__(
         self,
         cmap: str = "jet",
-        n_levels: int = 10,
         projection: ccrs.Projection = ccrs.PlateCarree(),
         map_width: int = 6,
         map_height: int = 3,
     ):
         self.cmap = cmap
-        self.n_levels = n_levels
         self.projection = projection
         self.map_width = map_width
         self.map_height = map_height

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections import defaultdict
 from typing import Optional
 
 import torch
@@ -10,6 +11,8 @@ from tqdm import tqdm
 from cdnp.model.cdnp import CDNP
 from cdnp.model.cnp import CNP
 from cdnp.model.ddpm import DDPM
+from cdnp.model.flow_matching.flow_matching import FlowMatching
+from cdnp.model.warm_start_diffusion import WarmStartDiffusion
 from cdnp.task import ModelCtx, PreprocessFn
 
 
@@ -128,6 +131,45 @@ class CnpRmseMetric(Metric):
         return "cnp_rmse"
 
 
+class EnsembleMetric(ABC):
+    @abstractmethod
+    def compute(self, samples: torch.Tensor, trg: torch.Tensor) -> float:
+        pass
+
+    @abstractmethod
+    def name(self) -> str:
+        pass
+
+
+class CRPS(EnsembleMetric):
+    def compute(self, samples: torch.Tensor, trg: torch.Tensor) -> float:
+        trg = trg.expand_as(samples[..., 0])
+
+        # Term A: E|X - trg|  (Monte-Carlo mean over samples)
+        a = (samples - trg.unsqueeze(-1)).abs().mean(dim=-1)
+
+        # Pairwise absolute differences
+        # Expand: (..., N, 1) and (..., 1, N)
+        diffs = (samples.unsqueeze(-1) - samples.unsqueeze(-2)).abs()
+        b = 0.5 * diffs.mean(dim=(-1, -2))
+
+        crps = a - b
+        return crps.mean().item()
+
+    def name(self) -> str:
+        return "crps"
+
+
+class EnsembleRmse(EnsembleMetric):
+    def compute(self, samples: torch.Tensor, trg: torch.Tensor) -> float:
+        pred = samples.mean(dim=-1)
+        rmse = torch.sqrt(torch.mean((pred - trg) ** 2))
+        return rmse.item()
+
+    def name(self) -> str:
+        return "ensemble_rmse"
+
+
 @torch.no_grad()
 def evaluate(
     model: CDNP | DDPM | CNP,
@@ -154,3 +196,42 @@ def evaluate(
                 break
 
     return {metric.name(): metric.compute() for metric in metrics}
+
+
+@torch.no_grad()
+def evaluate_ensemble(
+    model: FlowMatching | WarmStartDiffusion,
+    dataloader: DataLoader,
+    preprocess_fn: PreprocessFn,
+    metrics: list[EnsembleMetric],
+    num_samples: int,
+    use_tqdm: bool = False,
+    dry_run: bool = False,
+) -> dict[str, float]:
+    model.eval()
+    device = next(model.parameters()).device
+
+    sums = defaultdict(int)
+    count = 0
+
+    # TODO: make sure we don't repeat forward passes
+    with autocast(device_type=device.type, dtype=torch.float16):
+        for batch in tqdm(dataloader, disable=not use_tqdm):
+            ctx, trg = preprocess_fn(batch)
+            ctx = ctx.to(device)
+            trg = trg.to(device)  # B, C, H, W
+
+            samples = []
+            for _ in range(num_samples):
+                samples.append(model.sample(ctx, num_samples=-1))
+            samples = torch.stack(samples, dim=-1)  # B, C, H, W, N
+
+            for metric in metrics:
+                result = metric.compute(samples, trg)
+                sums[metric.name()] += result
+            count += 1
+
+            if dry_run:
+                break
+
+    return {name: total / count for name, total in sums.items()}
