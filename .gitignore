@@ -5,6 +5,10 @@ _backup/
 _results/
 fid_results*
 debug_*
+*.pkl*
+*.csv*
+*.png*
+*.pdf*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
