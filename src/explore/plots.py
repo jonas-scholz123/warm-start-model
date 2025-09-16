@@ -7,7 +7,6 @@ from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath
 from torchvision.utils import make_grid
 
-from cdnp.evaluate import FIDMetric, evaluate
 from cdnp.model.cdnp import CDNP
 from cdnp.util.instantiate import Experiment
 
@@ -42,7 +41,10 @@ class Args:
         self.model = model
 
 
-args = Args(experiment="2025-07-07_11-16_witty_narwhal", model="best_ema")
+args = Args(experiment="2025-09-05_19-38_vibrant_fish", model="latest_ema")
+args = Args(experiment="2025-08-01_11-20_mysterious_aardvark", model="latest_ema")
+args = Args(experiment="new_warmth_scaling", model="latest_ema")
+#args = Args(experiment="2025-07-21_22-38_playful_xenon", model="latest_ema")
 
 exp_path = Path(args.experiment)
 if not exp_path.exists():
@@ -66,40 +68,33 @@ mean = cfg.data.dataset.norm_means
 std = cfg.data.dataset.norm_stds
 # %%
 
-metric = FIDMetric(num_samples=50_000, device="cuda", means=mean, stds=std)
-
-if len(exp.val_loader) < 50_000:
-    print(
-        "Validation set is smaller than 50_000 samples, using the training set for FID evaluation."
-    )
-    dataloader = exp.train_loader
-else:
-    dataloader = exp.val_loader
-
-result = evaluate(
-    model=model_to_load,
-    dataloader=dataloader,
-    preprocess_fn=exp.preprocess_fn,
-    metrics=[metric],
-    use_tqdm=True,
-)
-print(result)
-# %%
-
-num_samples = 8
-num_repeats = 10
+num_samples = 4
+num_repeats = 3
+ode_method = "midpoint"
+skip_type = "time_uniform"
+nfe = 10
+#ode_method = "dpm_solver_3"
+#skip_type = "logSNR"
+#nfe = 20
+offset = 0
 
 batch = next(iter(exp.val_loader))
 ctx, trg = exp.preprocess_fn(batch)
 ctx = ctx.to("cuda")
 trg = trg.to("cuda")
-ctx.image_ctx = ctx.image_ctx[5 : 5 + num_samples]
-trg = trg[5 : 5 + num_samples]
+ctx.image_ctx = ctx.image_ctx[offset : offset + num_samples]
+trg = trg[offset : offset + num_samples]
 masked_x = ctx.image_ctx[:, :-1, :, :]
 
 outs = [trg, masked_x]
 for _ in range(num_repeats):
-    out = model_to_load.sample(ctx, num_samples=num_samples)
+    out = model_to_load.sample(
+        ctx,
+        num_samples=num_samples,
+        ode_method=ode_method,
+        skip_type=skip_type,
+        nfe=nfe,
+    )
     outs.append(out)
 out = torch.cat(outs, dim=0)
 
@@ -109,8 +104,16 @@ plt.figure(figsize=(size * num_samples, size * num_repeats))
 grid = make_grid(out.cpu(), nrow=num_samples, normalize=True)
 plt.imshow(grid.permute(1, 2, 0))
 plt.axis("off")
-plt.savefig("celeba_samples.png", bbox_inches="tight", dpi=300)
+if "CelebA" in cfg.data.dataset["_target_"]:
+    name = "celeba"
+else:
+    name = "cifar10"
+plt.savefig(
+    f"{name}_samples_{num_samples}_{num_repeats}.png", bbox_inches="tight", dpi=300
+)
 plt.show()
+
+# %%
 # %%
 
 num_samples = 1
