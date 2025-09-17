@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 from cartopy import crs as ccrs
 from matplotlib.animation import FuncAnimation
@@ -13,9 +14,9 @@ from torch.utils.data._utils.collate import default_collate
 from tqdm import tqdm
 
 from cdnp.data.era5 import ZarrDatasource, make_gridded_weather_task
-from cdnp.model.cdnp import CDNP
 from cdnp.plot.geoplot import GeoPlotter
 from cdnp.util.instantiate import Experiment
+from explore.weather_eval import generate_ensemble
 
 # %%
 
@@ -59,13 +60,20 @@ ds = make_gridded_weather_task(
 # %%
 
 # exp_name = "2025-07-07_21-13_noble_iguana"
-exp_name = "2025-07-08_16-32_jolly_narwhal"
+# exp_name = "2025-07-08_16-32_jolly_narwhal"
+exp_name = "2025-09-05_13-18_radiant_hippo"
 
 # path = Path("/home/jonas/Documents/code/denoising-np/_weights") / exp_name
 path = Path("/home/jonas/Documents/code/denoising-np/_output") / exp_name
 path = ExperimentPath.from_path(path)
 cfg = path.get_config()
 exp = Experiment.from_config(cfg)
+device = "cuda"
+batch = default_collate([ds[0]])
+ctx, trg = exp.preprocess_fn(batch)
+ctx, trg = ctx.to(device), trg.to(device)
+
+# %%
 
 # %%
 
@@ -96,17 +104,10 @@ fig, ax = plt.subplots(figsize=(15, 7), subplot_kw={"projection": ccrs.PlateCarr
 ani = FuncAnimation(fig, update, frames=200, init_func=init, blit=False)
 ani.save("./era5.gif", fps=3)
 # %%
-device = "cuda"
-batch = default_collate([ds[0]])
-ctx, trg = exp.preprocess_fn(batch)
-ctx, trg = ctx.to(device), trg.to(device)
 # %%
 
 cm = CheckpointManager(path)
-model: CDNP = exp.model
-_ = cm.reproduce_model(model, "best")
-# %%
-model.set_steps(100000)
+_ = cm.reproduce_model(exp.model, "best")
 # %%
 N_timesteps = 50
 num_static_dims = 37
@@ -312,29 +313,45 @@ ground_truth = torch.stack([ds[i][3][..., 0, 0] for i in range(N_timesteps)], di
 ground_truth = ground_truth.unsqueeze(-1)
 plottable = torch.cat([ground_truth, all_forecasts], dim=-1)
 # %%
-import matplotlib
+n_members = 3
+n_days = 5
+n_timesteps = 4 * n_days
+ode_method = "midpoint"
+nfe = 10
+ensemble = generate_ensemble(
+    ctx,
+    exp.model,
+    n_timesteps=n_timesteps,
+    n_members=n_members,
+    ode_method=ode_method,
+    nfe=nfe,
+)
+# %%
 
-from cdnp.plot.geoplot import GeoPlotter
+var_idx = 0
 
-matplotlib.rcParams["mathtext.fontset"] = "custom"
-matplotlib.rcParams["mathtext.rm"] = "Bitstream Vera Sans"
-matplotlib.rcParams["mathtext.it"] = "Bitstream Vera Sans:italic"
-matplotlib.rcParams["mathtext.bf"] = "Bitstream Vera Sans:bold"
-matplotlib.rcParams["mathtext.fontset"] = "stix"
-matplotlib.rcParams["font.family"] = "STIXGeneral"
+width = 3.5
 
-gp = GeoPlotter(map_width=3, map_height=1.5)
+gp = GeoPlotter(map_width=width, map_height=width / 2)
 
+ground_truth = torch.Tensor(np.array([ds[i][3] for i in range(n_timesteps)])).to(device)
+ground_truth = ground_truth[:, :, :, :, var_idx]
+ground_truth = ground_truth.permute(1, 2, 0, 3)
+ens = ensemble[0, var_idx]
+
+plottable = torch.cat([ground_truth, torch.Tensor(ens)], dim=-1)
+plottable = plottable[:, :, 3::4, :]
+
+col_titles = ["Lead Time = 1 day"] + [f"{i} days" for i in range(2, n_days + 1)]
 
 fig = gp.plot_grid(
     data=plottable,
-    row_titles=["Ground Truth"] + [f"Sample {i + 1}" for i in range(N_samples)],
-    col_titles=[f"T + {6 * (i + 1)}h" for i in range(N_timesteps)],
-    share_cmap="col",
+    row_titles=["Ground Truth"] + [f"Sample {i + 1}" for i in range(n_members)],
+    col_titles=col_titles,
+    share_cmap="global",
+    show_cbar=False,
 )
-plt.subplots_adjust(
-    wspace=0.1, hspace=0.1
-)  # wspace controls x-direction, hspace controls y-direction
+fig.subplots_adjust(wspace=0.00, hspace=0.05)
 
 fig.savefig(
     "forecast_samples.png",

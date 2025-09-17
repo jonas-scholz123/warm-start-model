@@ -115,6 +115,7 @@ class GeoPlotter:
         vmin: Optional[Union[List[Optional[float]], float]] = None,
         vmax: Optional[Union[List[Optional[float]], float]] = None,
         titles: Optional[List[str]] = None,
+        **kwargs: Any,
     ) -> None:
         """
         Plots multiple 2D tensors onto a sequence of provided Axes objects.
@@ -147,6 +148,7 @@ class GeoPlotter:
                 vmin=vmins[i],
                 vmax=vmaxs[i],
                 title=actual_titles[i],
+                **kwargs,
             )
 
     def plot_grid(
@@ -155,6 +157,7 @@ class GeoPlotter:
         col_titles: Sequence[str],
         row_titles: Sequence[str],
         share_cmap: ShareCmap = "row",
+        **kwargs: Any,
     ) -> Figure:
         num_rows = data.shape[-1]
         num_cols = data.shape[-2]
@@ -203,6 +206,7 @@ class GeoPlotter:
                     vmin=vmin,
                     vmax=vmax,
                     titles=None,
+                    **kwargs,
                 )
         else:
             for col_idx in range(num_cols):
@@ -216,6 +220,7 @@ class GeoPlotter:
                     vmin=vmin,
                     vmax=vmax,
                     titles=None,
+                    **kwargs,
                 )
 
         _add_left_titles(fig, axs[:, 0], row_titles)
@@ -345,12 +350,12 @@ def _add_left_titles(
     fig: Figure,
     axs: Sequence[Axes],
     titles: Sequence[str],
-    fontsize: int = 10,
+    fontsize: int = 12,
 ) -> None:
     for ax, title in zip(axs, titles):
         bbox = ax.get_position()
         y_center = bbox.y0 + bbox.height / 2
-        x_pos = bbox.x0 - 0.15 * bbox.width
+        x_pos = bbox.x0 - 0.05 * bbox.width
 
         fig.text(
             x_pos,

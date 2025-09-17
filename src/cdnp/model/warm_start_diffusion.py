@@ -93,7 +93,12 @@ class WarmStartDiffusion(nn.Module):
         prd_std = prd_std.clamp(min=1.0 - warmth)
 
         scaled_std = warmth * prd_std + (1 - warmth) * base_std
-        return scaled_std, warmth.squeeze()
+
+        squeezed = warmth.squeeze()
+        if squeezed.ndim < 1:
+            # For the case where we're doing inference on a single sample (B=1).
+            squeezed = squeezed.unsqueeze(0)
+        return scaled_std, squeezed
 
     @torch.no_grad()
     def sample(self, ctx: ModelCtx, num_samples: int = 0, **kwargs) -> torch.Tensor:
@@ -138,6 +143,8 @@ class WarmStartDiffusion(nn.Module):
         return samples
 
     def _get_sample_warmth(self, kwargs) -> float:
+        # TODO JONAS!
+        return self.max_warmth
         if "nfe" not in kwargs:
             return self.max_warmth
         nfe = kwargs["nfe"]

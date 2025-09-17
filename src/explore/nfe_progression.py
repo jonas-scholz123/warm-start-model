@@ -13,14 +13,6 @@ from cdnp.util.instantiate import Experiment
 
 torch.manual_seed(42)  # Set a seed for reproducibility.
 
-plt.rcParams.update(
-    {
-        "font.family": "serif",
-        "font.serif": "STIXGeneral",
-        "mathtext.fontset": "stix",
-    }
-)
-
 
 @dataclass
 class Args:
@@ -35,24 +27,42 @@ class Args:
 args = [
     Args(
         exp_name="2025-07-21_22-38_playful_xenon",
-        title="FM",
-        solver="midpoint",
-    ),
-    Args(
-        exp_name="2025-07-23_15-24_sassy_unicorn_better_cnp",
-        title="Warm FM",
+        title="Cold FM, Midpoint",
         solver="midpoint",
     ),
     Args(
         exp_name="2025-07-21_22-38_playful_xenon",
-        title="FM + DPM Solver++",
+        title="Cold FM, DPM Solver",
         solver="dpm_solver_3",
     ),
     Args(
         exp_name="2025-07-23_15-24_sassy_unicorn_better_cnp",
-        title="Warm FM + DPM Solver++",
-        solver="dpm_solver_3",
+        title="Warm FM (Ours)",
+        solver="midpoint",
     ),
+    # Args(
+    #    exp_name="2025-07-23_15-24_sassy_unicorn_better_cnp",
+    #    title="Warm FM + DPM Solver",
+    #    solver="dpm_solver_3",
+    # ),
+    # Args(
+    #    exp_name="2025-08-01_11-20_mysterious_aardvark",
+    #    title="Cold FM, Midpoint",
+    #    solver="midpoint",
+    #    skip_type="time_uniform",
+    # ),
+    # Args(
+    #    exp_name="2025-08-01_11-20_mysterious_aardvark",
+    #    title="Cold FM, DPM Solver",
+    #    solver="dpm_solver_3",
+    #    skip_type="logSNR",
+    # ),
+    # Args(
+    #    exp_name="2025-09-05_19-38_vibrant_fish",
+    #    title="Warm FM (Ours)",
+    #    solver="midpoint",
+    #    skip_type="time_uniform",
+    # ),
 ]
 # nfes = [1, 2, 3, 4, 5, 8, 12, 20, 50]
 nfes = [2, 4, 6, 8, 12, 20]
@@ -72,6 +82,8 @@ ctx = ctx.to("cuda")
 
 def load_model(args: Args):
     path = Path("/home/jonas/Documents/code/denoising-np/_weights") / args.exp_name
+    if not path.exists():
+        path = Path("/home/jonas/Documents/code/denoising-np/_output") / args.exp_name
     path = ExperimentPath.from_path(path)
     cfg = path.get_config()
     exp = Experiment.from_config(cfg)  # ty: ignore
@@ -138,6 +150,6 @@ for idx in range(samples.shape[0]):
                 axs[0, j].set_title(f"NFE: {nfe}", fontsize=fontsize)
         axs[i, 0].set_ylabel(arg.title, rotation=90, fontsize=fontsize)
     plt.show()
-    if count > 10:
-        break
+    # if count > 10:
+    # break
 # %%

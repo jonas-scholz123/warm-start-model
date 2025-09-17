@@ -55,15 +55,13 @@ def preprocess_weather_forecast(
     dyn = dyn.reshape(B, lat, lon, time * var)
 
     B, lat, lon, time, var = trg.shape
-    if time > 1:
-        raise NotImplementedError("Only single target time step is supported for now.")
-    trg = trg.reshape(B, lat, lon, time * var)
+    # trg = trg.reshape(B, lat, lon, time * var)
 
     # Match convention of other datasets to have channels first.
 
-    # Convert to (B, time*var, lat, lon)
+    # Convert to (B, var, lat, lon, time)
     dyn = dyn.permute(0, 3, 1, 2)
-    trg = trg.permute(0, 3, 1, 2)
+    trg = trg.permute(0, 4, 1, 2, 3)
 
     # Have dyn at the end, because it's used as the residual.
 

@@ -10,9 +10,14 @@ path = results_dir / "fid_results.csv"
 name_map = {
     "2025-07-21_22-38_playful_xenon": "Flow Matching",
     "new_warmth_scaling": "Warm Flow Matching",
-    # "mean_only_continuation": "Mean Only",
-    # "2025-07-30_18-12_optimistic_narwhal": "No Warmth Blending",
+    "mean_only_continuation": "Mean Only",
+    "2025-07-30_18-12_optimistic_narwhal": "No Warmth Blending",
 }
+
+ablations = [
+    "mean_only_continuation",
+    "2025-07-30_18-12_optimistic_narwhal",
+]
 
 
 def plot_fid_vs_nfe(
@@ -23,6 +28,7 @@ def plot_fid_vs_nfe(
     xscale: str = "log",
     title: str = "",
     legend: bool = False,
+    y_label = "FID",
     **plot_kwargs,
 ):
     """
@@ -86,6 +92,7 @@ def plot_fid_vs_nfe(
 df = pd.read_csv(path).sort_values(["experiment", "nfe"])
 df = df[df["num_samples"] == 50000]
 df = df[df["experiment"].isin(name_map.keys())]
+df = df[~df["experiment"].isin(ablations)]
 # df = df[df["solver"] == "dpm_solver_3"]
 # df = df[df["solver"] == "dpm_solver_2"]
 # df = df[df["solver"] == "euler"]
@@ -115,26 +122,60 @@ plot_fid_vs_nfe(
     axs[2],
     name_map,
     title="Best",
-    marker="x",https://wandb.ai/jonas-scholz/cdnp/workspace?nw=nwuserjonasscholz
+    marker="x",
     linestyle="--",
     legend=True,
 )
 
 axs[0].set_ylabel("FID")
 fig.savefig(results_dir / "fid_vs_nfe_cifar_all_samplers.pdf", bbox_inches="tight")
+# %%
+df = pd.read_csv(path).sort_values(["experiment", "nfe"])
+df = df[df["num_samples"] == 50000]
+df = df[df["experiment"].isin(name_map.keys())]
+df = df[df["nfe"] % 2 == 0]
 
-fig, ax = plt.subplots(1, 1, figsize=(4, 4), tight_layout=True)
+celeba_path = "/home/jonas/Documents/code/denoising-np/_results/fid_results_celeba.csv"
+df_celeba = pd.read_csv(celeba_path).sort_values(["experiment", "nfe"])
+df_celeba = df_celeba[df_celeba["num_samples"] == 50000]
+df_celeba = df_celeba[df_celeba["nfe"] % 2 == 0]
+celeba_name_map = {
+    "celeba_cold_fm": "Flow Matching",
+    #"2025-09-05_19-38_vibrant_fish": "Warm Flow Matching (Ours)",
+    "2025-07-29_22-57_quirky_jaguar": "Warm Flow Matching"
+}
+
+fig, axs = plt.subplots(1, 3, figsize=(10, 3.8), tight_layout=True, sharey=True)
 plot_fid_vs_nfe(
-    df,
-    ax,
+    df_celeba,
+    axs[0],
+    celeba_name_map,
+    title="CelebA",
+    marker="x",
+    linestyle="--",
+    legend=False,
+)
+
+plot_fid_vs_nfe(
+    df[~df["experiment"].isin(ablations)],
+    axs[1],
     name_map,
     title="CIFAR-10",
     marker="x",
     linestyle="--",
+    legend=False,
+)
+plot_fid_vs_nfe(
+    df,
+    axs[2],
+    name_map,
+    title="CIFAR-10 (All Ablations)",
+    marker="x",
+    linestyle="--",
     legend=True,
 )
-ax.set_ylabel("FID")
-fig.savefig(results_dir / "fid_vs_nfe_cifar_best.pdf", bbox_inches="tight")
+axs[0].set_ylabel("FID")
+fig.savefig(results_dir / "fid_vs_nfe_best_all.pdf", bbox_inches="tight")
 
 
 # %%

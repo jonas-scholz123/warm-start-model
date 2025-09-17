@@ -17,6 +17,9 @@ from cdnp.model.ctx import ModelCtx
 from cdnp.model.flow_matching.flow_matching import FlowMatching
 from cdnp.util.instantiate import Experiment
 
+NUM_STATIC_DIMS = 5
+NUM_DYN_DIMS = 2
+
 
 def generate_forecasts(
     ctx: ModelCtx, model: FlowMatching, n_timesteps: int, **kwargs
@@ -30,8 +33,8 @@ def generate_forecasts(
         ctx.image_ctx = ctx.image_ctx.to(dtype=torch.float32)
         forecast = model.sample(ctx, num_samples=-1, **kwargs)
         im_ctx = ctx.image_ctx
-        static_ctx = im_ctx[:, :num_static_dims, ...]
-        dyn_prev = im_ctx[:, num_static_dims : num_static_dims + num_dyn_dims, ...]
+        static_ctx = im_ctx[:, :NUM_STATIC_DIMS, ...]
+        dyn_prev = im_ctx[:, NUM_STATIC_DIMS : NUM_STATIC_DIMS + NUM_DYN_DIMS, ...]
 
         new_ctx = torch.cat(
             [
@@ -80,7 +83,8 @@ class CRPS:
 
         # Calculate the unbiased expectation of pairwise differences
         b_sum = (samples_sorted * weights).sum(dim=-1)
-        b = 0.5 * b_sum / (n * (n - 1) + 1e-6)  # Add epsilon for n=1 case
+        # b = 0.5 * b_sum / (n * (n - 1) + 1e-6)  # Add epsilon for n=1 case
+        b = b_sum / (n * (n - 1) + 1e-6)  # Add epsilon for n=1 case
 
         crps = a - b
         return crps.mean(dim=(0, 2, 3))
@@ -312,243 +316,245 @@ def get_power_spectrum_1d(
     return torch.flip(final_power, dims=[0]), torch.flip(final_wavelengths_km, dims=[0])
 
 
-# %%
+if __name__ == "__main__":
+    device = "cuda"
 
-num_static_dims = 5
-device = "cuda"
-num_dyn_dims = 2
+    n_t0s = 30
+    num_bins = 30
+    exp_names = [
+        # "2025-09-05_13-18_radiant_hippo",
+        # "2025-09-01_16-29_jolly_whale",
+    ]
+    nfes = [2, 4, 6, 8, 10, 12, 14, 16, 20, 30, 50, 100]
 
-n_t0s = 30
-num_bins = 30
-exp_names = [
-    "2025-09-05_13-18_radiant_hippo",
-    "2025-09-01_16-29_jolly_whale",
-]
-nfes = [2, 4, 6, 8, 10, 12, 14, 16, 20, 30, 50, 100]
+    samplers = [
+        {
+            "solver": "midpoint",
+            "skip_type": "time_uniform",
+        },
+        {
+            "solver": "dpm_solver_3",
+            "skip_type": "time_uniform",
+        },
+    ]
 
-samplers = [
-    {
-        "solver": "midpoint",
-        "skip_type": "time_uniform",
-    },
-    {
-        "solver": "dpm_solver_3",
-        "skip_type": "time_uniform",
-    },
-]
+    # %%
 
-for exp_name in exp_names:
-    exp = load_experiment(exp_name)
-    ds = exp.val_loader.dataset
+    for exp_name in exp_names:
+        exp = load_experiment(exp_name)
+        ds = exp.val_loader.dataset
 
-    plt.figure()
+        plt.figure()
 
-    sampler_results = {}
-    with torch.no_grad():
-        for sampler in samplers:
-            results = []
-            for nfe in nfes:
-                ratios = []
-                for i in tqdm(range(n_t0s)):
-                    batch = default_collate([ds[i]])
+        sampler_results = {}
+        with torch.no_grad():
+            for sampler in samplers:
+                results = []
+                for nfe in nfes:
+                    ratios = []
+                    for i in tqdm(range(n_t0s)):
+                        batch = default_collate([ds[i]])
 
-                    ctx, trg = exp.preprocess_fn(batch)  # ty: ignore
-                    ctx, trg = ctx.to(device), trg.to(device)
+                        ctx, trg = exp.preprocess_fn(batch)  # ty: ignore
+                        ctx, trg = ctx.to(device), trg.to(device)
 
-                    ens = generate_ensemble(
-                        ctx,
-                        exp.model,  # ty: ignore
-                        n_timesteps=1,
-                        n_members=1,
-                        nfe=nfe,
-                        ode_method=sampler["solver"],
-                        skip_type=sampler["skip_type"],
-                    )
-                    ens_slice = ens[0, 0, :, :, 0, 0]
-                    trg_slice = trg[0, 0, :, :]
-                    ps, wl = get_power_spectrum_1d(ens_slice.cpu(), num_bins=num_bins)
-                    ps_trg, wl_trg = get_power_spectrum_1d(
-                        trg_slice.cpu(), num_bins=num_bins
-                    )
+                        ens = generate_ensemble(
+                            ctx,
+                            exp.model,  # ty: ignore
+                            n_timesteps=1,
+                            n_members=1,
+                            nfe=nfe,
+                            ode_method=sampler["solver"],
+                            skip_type=sampler["skip_type"],
+                        )
+                        ens_slice = ens[0, 0, :, :, 0, 0]
+                        trg_slice = trg[0, 0, :, :]
+                        ps, wl = get_power_spectrum_1d(
+                            ens_slice.cpu(), num_bins=num_bins
+                        )
+                        ps_trg, wl_trg = get_power_spectrum_1d(
+                            trg_slice.cpu(), num_bins=num_bins
+                        )
 
-                    ratio = ps / ps_trg
-                    ratios.append(ratio)
-                ratio = torch.stack(ratios, dim=0).mean(dim=0)
-                results.append(ratio)
-            res = torch.stack(results, dim=0).cpu().numpy()  # (num_nfes, num_bins)
-            sampler_results[sampler["solver"]] = res
+                        ratio = ps / ps_trg
+                        ratios.append(ratio)
+                    ratio = torch.stack(ratios, dim=0).mean(dim=0)
+                    results.append(ratio)
+                res = torch.stack(results, dim=0).cpu().numpy()  # (num_nfes, num_bins)
+                sampler_results[sampler["solver"]] = res
 
-    best = None
-    for res in sampler_results.values():
-        if best is None:
-            best = res.copy()
-        else:
-            for i in range(res.shape[0]):
-                total_abs_err = np.abs(res[i, :] - 1.0).sum()
-                current_abs_err = np.abs(best[i, :] - 1.0).sum()
-                if total_abs_err < current_abs_err:
-                    best[i, :] = res[i, :]
-    sampler_results["best"] = best
-    sampler_results["wl"] = wl.cpu().numpy()
+        best = None
+        for res in sampler_results.values():
+            if best is None:
+                best = res.copy()
+            else:
+                for i in range(res.shape[0]):
+                    total_abs_err = np.abs(res[i, :] - 1.0).sum()
+                    current_abs_err = np.abs(best[i, :] - 1.0).sum()
+                    if total_abs_err < current_abs_err:
+                        best[i, :] = res[i, :]
+        sampler_results["best"] = best
+        sampler_results["wl"] = wl.cpu().numpy()
 
-    with open(f"frequency_results_{exp_name}.pkl", "wb") as f:
-        pickle.dump(sampler_results, f)
+        with open(f"frequency_results_{exp_name}.pkl", "wb") as f:
+            pickle.dump(sampler_results, f)
 
-# %%
-# exp_name = "2025-07-07_21-13_noble_iguana"
-# exp_name = "2025-09-01_10-06_lucky_dog"
-exp_name = "2025-09-01_16-29_jolly_whale"
-# exp_name = "2025-09-05_13-18_radiant_hippo"
+    # %%
+    # exp_name = "2025-07-07_21-13_noble_iguana"
+    # exp_name = "2025-09-01_10-06_lucky_dog"
+    exp_name = "2025-09-01_16-29_jolly_whale"
+    # exp_name = "2025-09-05_13-18_radiant_hippo"
 
-n_days = 5
-n_t0s = 4
-n_members = 50
-nfes = [2, 6, 12, 20, 40]
-solver = "dpm_solver_3"
-skip_type = "logSNR"
-# %%
-for nfe in nfes:
-    exp = load_experiment(exp_name)
-    results = compute_results(
-        exp=exp,
-        n_t0s=n_t0s,
-        n_members=n_members,
-        nfe=nfe,
-        n_days=n_days,
-        ode_method=solver,
-        skip_type=skip_type,
-    )
+    n_days = 5
+    n_t0s = 40
+    n_members = 50
+    nfes = [2, 6, 10, 16, 20, 30]
+    solver = "dpm_solver_3"
+    skip_type = "logSNR"
 
-    ds = exp.val_loader.dataset
-    trg_vars = ds.trg_variables_and_levels  # ty: ignore
-
-    csv_path = f"wind_results_{exp_name}.csv"
-    if Path(csv_path).exists():
-        df = pd.read_csv(csv_path)
-    else:
-        df = pd.DataFrame(
-            columns=[
-                "exp_name",
-                "nfe",
-                "solver",
-                "skip_type",
-                "n_members",
-                "n_0_times",
-                "variable",
-                "metric",
-                "time_delta_hrs",
-                "value",
-            ]
+    for nfe in nfes:
+        exp = load_experiment(exp_name)
+        results = compute_results(
+            exp=exp,
+            n_t0s=n_t0s,
+            n_members=n_members,
+            nfe=nfe,
+            n_days=n_days,
+            ode_method=solver,
+            skip_type=skip_type,
         )
 
-    rows = []
-    for var_idx, var in enumerate(trg_vars):
-        for metric, result in results.items():
-            for time_idx in range(result.shape[1]):
-                time_delta = 6 * (time_idx + 1)
-                row = {
-                    "exp_name": exp_name,
-                    "nfe": nfe,
-                    "solver": solver,
-                    "skip_type": skip_type,
-                    "n_members": n_members,
-                    "n_0_times": n_t0s,
-                    "variable": var,
-                    "metric": metric,
-                    "time_delta_hrs": time_delta,
-                    "value": float(result[var_idx, time_idx]),
-                }
-                rows.append(row)
+        ds = exp.val_loader.dataset
+        trg_vars = ds.trg_variables_and_levels  # ty: ignore
 
-    print(rows)
-    df = pd.concat([df, pd.DataFrame(rows)], ignore_index=True)
-    print("Saving to ", csv_path)
-    df.to_csv(csv_path, index=False)
+        csv_path = f"wind_results_{exp_name}.csv"
+        if Path(csv_path).exists():
+            df = pd.read_csv(csv_path)
+        else:
+            df = pd.DataFrame(
+                columns=[
+                    "exp_name",
+                    "nfe",
+                    "solver",
+                    "skip_type",
+                    "n_members",
+                    "n_0_times",
+                    "variable",
+                    "metric",
+                    "time_delta_hrs",
+                    "value",
+                ]
+            )
 
+        rows = []
+        for var_idx, var in enumerate(trg_vars):
+            for metric, result in results.items():
+                for time_idx in range(result.shape[1]):
+                    time_delta = 6 * (time_idx + 1)
+                    row = {
+                        "exp_name": exp_name,
+                        "nfe": nfe,
+                        "solver": solver,
+                        "skip_type": skip_type,
+                        "n_members": n_members,
+                        "n_0_times": n_t0s,
+                        "variable": var,
+                        "metric": metric,
+                        "time_delta_hrs": time_delta,
+                        "value": float(result[var_idx, time_idx]),
+                    }
+                    rows.append(row)
 
-# %%
+        print(rows)
+        df = pd.concat([df, pd.DataFrame(rows)], ignore_index=True)
+        print("Saving to ", csv_path)
+        df.to_csv(csv_path, index=False)
 
-# %%
+    # %%
 
-fig, axs = plt.subplots(1, 3, figsize=(12, 4))
+    # %%
 
-yticklabels = [f"{w:.0e}" if idx % 5 == 0 else "" for idx, w in enumerate(wl.numpy())]
+    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
 
-plottable = sampler_results["midpoint"]
-sns.heatmap(
-    plottable.T,
-    xticklabels=nfes,
-    yticklabels=yticklabels,
-    cmap="vlag",
-    center=1.0,
-    ax=axs[0],
-)
+    yticklabels = [
+        f"{w:.0e}" if idx % 5 == 0 else "" for idx, w in enumerate(wl.numpy())
+    ]
 
-plottable = sampler_results["dpm_solver_3"]
-sns.heatmap(
-    plottable.T,
-    xticklabels=nfes,
-    yticklabels=yticklabels,
-    cmap="vlag",
-    center=1.0,
-    ax=axs[1],
-)
+    plottable = sampler_results["midpoint"]
+    sns.heatmap(
+        plottable.T,
+        xticklabels=nfes,
+        yticklabels=yticklabels,
+        cmap="vlag",
+        center=1.0,
+        ax=axs[0],
+    )
 
-axs[0].set_xlabel("NFE")
-axs[1].set_xlabel("NFE")
-axs[0].set_ylabel("Wavelength (km)")
-axs[0].set_title("Midpoint")
-axs[1].set_title("DPM-Solver")
-axs[1].set_yticks([], labels=[])
+    plottable = sampler_results["dpm_solver_3"]
+    sns.heatmap(
+        plottable.T,
+        xticklabels=nfes,
+        yticklabels=yticklabels,
+        cmap="vlag",
+        center=1.0,
+        ax=axs[1],
+    )
 
-plottable = sampler_results["best"]
-abs_diff = np.abs(plottable - 1.0).sum(axis=1)
-axs[2].plot(nfes, abs_diff, marker="x")
-axs[2].set_xscale("log")
-axs[2].set_title("Power Spectrum Deviation (Best)")
-plt.xlabel("NFE")
-plot_nfes = [2, 4, 6, 8, 10, 14, 20, 30, 50]
-plt.xticks(plot_nfes, labels=plot_nfes, rotation=90)
-plt.show()
+    axs[0].set_xlabel("NFE")
+    axs[1].set_xlabel("NFE")
+    axs[0].set_ylabel("Wavelength (km)")
+    axs[0].set_title("Midpoint")
+    axs[1].set_title("DPM-Solver")
+    axs[1].set_yticks([], labels=[])
 
-# %%
-
-time_skip = 4  # plot every 24h
-trg_and_ensemble = torch.cat([trg.unsqueeze(-1), ensemble], dim=-1)
-plot_ensemble = trg_and_ensemble[:, :, :, :, ::time_skip, : n_plot_trajectories + 1]
-
-col_titles = [
-    f"T + {(6 * (i + 1) * time_skip) // 24} days" for i in range(plot_ensemble.shape[4])
-]
-
-row_titles = [f"Member {i + 1}" for i in range(n_plot_trajectories)]
-row_titles = ["Ground Truth"] + row_titles
-
-_ = gp.plot_grid(
-    plot_ensemble[0, 1, :, :, :, :].cpu(),
-    col_titles=col_titles,
-    row_titles=row_titles,
-)
-
-
-# %%
-
-variable_idx = 0
-# variable_name = ds.trg_variables_and_levels[variable_idx]  # ty: ignore
-# n_timesteps = trg.shape[4]
-n_timesteps = n_days * 4
-
-times_hrs = np.arange(n_timesteps) * 6 + 6
-times_days = times_hrs / 24
-for name, result in results.items():
-    plt.figure()
-    # plt.title(f"{name} - {variable_name}")
-    # x with dots and lines:
-    plt.plot(times_hrs, result[variable_idx, :].cpu(), marker="x")
-    ticks = times_hrs[3::4]
-    plt.xticks(ticks, labels=ticks // 24)
-    plt.xlabel("Lead times (days)")
-    plt.ylabel(name)
+    plottable = sampler_results["best"]
+    abs_diff = np.abs(plottable - 1.0).sum(axis=1)
+    axs[2].plot(nfes, abs_diff, marker="x")
+    axs[2].set_xscale("log")
+    axs[2].set_title("Power Spectrum Deviation (Best)")
+    plt.xlabel("NFE")
+    plot_nfes = [2, 4, 6, 8, 10, 14, 20, 30, 50]
+    plt.xticks(plot_nfes, labels=plot_nfes, rotation=90)
     plt.show()
 
-# %%
+    # %%
+
+    time_skip = 4  # plot every 24h
+    trg_and_ensemble = torch.cat([trg.unsqueeze(-1), ensemble], dim=-1)
+    plot_ensemble = trg_and_ensemble[:, :, :, :, ::time_skip, : n_plot_trajectories + 1]
+
+    col_titles = [
+        f"T + {(6 * (i + 1) * time_skip) // 24} days"
+        for i in range(plot_ensemble.shape[4])
+    ]
+
+    row_titles = [f"Member {i + 1}" for i in range(n_plot_trajectories)]
+    row_titles = ["Ground Truth"] + row_titles
+
+    _ = gp.plot_grid(
+        plot_ensemble[0, 1, :, :, :, :].cpu(),
+        col_titles=col_titles,
+        row_titles=row_titles,
+    )
+
+    # %%
+
+    variable_idx = 0
+    # variable_name = ds.trg_variables_and_levels[variable_idx]  # ty: ignore
+    # n_timesteps = trg.shape[4]
+    n_timesteps = n_days * 4
+
+    times_hrs = np.arange(n_timesteps) * 6 + 6
+    times_days = times_hrs / 24
+    for name, result in results.items():
+        plt.figure()
+        # plt.title(f"{name} - {variable_name}")
+        # x with dots and lines:
+        plt.plot(times_hrs, result[variable_idx, :].cpu(), marker="x")
+        ticks = times_hrs[3::4]
+        plt.xticks(ticks, labels=ticks // 24)
+        plt.xlabel("Lead times (days)")
+        plt.ylabel(name)
+        plt.show()
+
+    # %%

@@ -13,15 +13,18 @@ exp_name = "2025-09-01_16-29_jolly_whale"
 csv_path = f"../../wind_results_{exp_name}.csv"
 df = pd.read_csv(csv_path)
 
-# metric = "crps"
-metric = "ensemble_rmse"
+metric = "crps"
+#metric = "ensemble_rmse"
 
 metric_names = {
     "crps": "CRPS",
     "ensemble_rmse": "Ensemble RMSE",
 }
 
-df = df[df["n_0_times"] == 80]
+metrics = list(metric_names.keys())
+
+df = df[df["n_members"] == 50]
+df = df[df["n_0_times"] == 40]
 df = df[df["metric"] == metric]
 # df = df[df["nfe"] != 2]
 df = df[df["solver"] == "dpm_solver_3"]
@@ -34,7 +37,7 @@ trg_vars = {
 }
 
 
-fig, axs = plt.subplots(1, len(trg_vars), figsize=(4 * len(trg_vars), 3))
+fig, axs = plt.subplots(1, len(trg_vars), figsize=(4 * len(trg_vars), 3), sharey=True)
 
 for i, (var, var_name) in enumerate(trg_vars.items()):
     var_df = df[df["variable"] == var]
@@ -57,7 +60,7 @@ for i, (var, var_name) in enumerate(trg_vars.items()):
         axs[i].set_title(var_name)
 axs[1].legend()
 axs[0].set_ylabel(metric_names[metric])
-#%%
+# %%
 experiments = [
     "2025-09-01_16-29_jolly_whale",
     "2025-09-05_13-18_radiant_hippo",
@@ -85,7 +88,7 @@ fig, axs = plt.subplots(
     sharey=False,
     gridspec_kw={"width_ratios": [1, 1, cbar_width, cbar_space, 1.2]},
 )
-fig.subplots_adjust(wspace=0.1, hspace=0.2) 
+fig.subplots_adjust(wspace=0.1, hspace=0.2)
 
 
 wl = wl.round(-1).astype(int)
