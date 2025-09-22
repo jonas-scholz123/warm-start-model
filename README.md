@@ -82,18 +82,3 @@ E.g.:
 ```bash
 python src/cdnp/train.py -cn cifar10_inpaint_cdnp mode=dev
 ```
-
-## Citation
-
-If you find this work useful, please cite the paper:
-
-```bibtex
-@misc{scholz2025warmstarts,
-      title={Warm Starts Accelerate Generative Modelling}, 
-      author={Jonas Scholz and Richard E. Turner},
-      year={2025},
-      eprint={2507.09212},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2507.09212}, 
-}

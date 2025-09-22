@@ -2,5 +2,5 @@
 data:
   dataset:
     data_source:
-      path: /home/jonas/Documents/code/otter/_data/era5_240x121.zarr
-    norm_path: /home/jonas/Documents/code/otter/otter/data/normalisation/stats
+      path: [redacted]
+    norm_path: [redacted]

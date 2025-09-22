@@ -5,7 +5,7 @@ from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath
 
 path = Path(
-    "/home/jonas/Documents/code/denoising-np/_weights/2025-06-15_11-04_sassy_unicorn"
+    "[redacted]"
 )
 path = ExperimentPath.from_path(path)
 cm = CheckpointManager(path)

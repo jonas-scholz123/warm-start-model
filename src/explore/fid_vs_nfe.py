@@ -4,7 +4,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pandas as pd
 
-results_dir = Path("/home/jonas/Documents/code/denoising-np/_results/")
+results_dir = Path("[redacted]")
 path = results_dir / "fid_results.csv"
 
 name_map = {
@@ -135,7 +135,7 @@ df = df[df["num_samples"] == 50000]
 df = df[df["experiment"].isin(name_map.keys())]
 df = df[df["nfe"] % 2 == 0]
 
-celeba_path = "/home/jonas/Documents/code/denoising-np/_results/fid_results_celeba.csv"
+celeba_path = "[redacted]"
 df_celeba = pd.read_csv(celeba_path).sort_values(["experiment", "nfe"])
 df_celeba = df_celeba[df_celeba["num_samples"] == 50000]
 df_celeba = df_celeba[df_celeba["nfe"] % 2 == 0]

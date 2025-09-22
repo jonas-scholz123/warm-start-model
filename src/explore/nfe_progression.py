@@ -67,7 +67,7 @@ args = [
 # nfes = [1, 2, 3, 4, 5, 8, 12, 20, 50]
 nfes = [2, 4, 6, 8, 12, 20]
 
-root = Path("/home/jonas/Documents/code/denoising-np/_weights")
+root = Path("[redacted]")
 
 
 path = root / args[0].exp_name
@@ -81,9 +81,9 @@ ctx = ctx.to("cuda")
 
 
 def load_model(args: Args):
-    path = Path("/home/jonas/Documents/code/denoising-np/_weights") / args.exp_name
+    path = Path("[redacted]") / args.exp_name
     if not path.exists():
-        path = Path("/home/jonas/Documents/code/denoising-np/_output") / args.exp_name
+        path = Path("[redacted]") / args.exp_name
     path = ExperimentPath.from_path(path)
     cfg = path.get_config()
     exp = Experiment.from_config(cfg)  # ty: ignore

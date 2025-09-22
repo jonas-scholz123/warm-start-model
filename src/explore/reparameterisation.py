@@ -12,7 +12,7 @@ from cdnp.model.cdnp import CDNP
 from cdnp.util.instantiate import Experiment
 
 # %%
-path = Path("/home/jonas/Documents/code/denoising-np/_weights/new_warmth_scaling")
+path = Path("[redacted]")
 
 path = ExperimentPath.from_path(path)
 cfg = path.get_config()

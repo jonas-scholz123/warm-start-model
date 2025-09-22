@@ -10,7 +10,7 @@ from cdnp.util.instantiate import Experiment
 
 
 fpath = Path(
-    "/home/jonas/Documents/code/denoising-np/_weights/2025-07-23_15-24_sassy_unicorn_better_cnp"
+    "[redacted]"
 )
 path = ExperimentPath.from_path(fpath)
 checkpoint_manager = CheckpointManager(path)

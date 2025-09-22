@@ -161,7 +161,7 @@ def compute_ensemble(
     n_days: int | None = None,
     **kwargs,
 ) -> tuple[torch.Tensor, torch.Tensor]:
-    path = Path("/home/jonas/Documents/code/denoising-np/_output") / exp_name
+    path = Path("[redacted]") / exp_name
     path = ExperimentPath.from_path(path)
     cfg = path.get_config()
     exp = Experiment.from_config(cfg)  # ty: ignore
@@ -187,7 +187,7 @@ def compute_ensemble(
 
 
 def load_experiment(exp_name: str) -> Experiment:
-    path = Path("/home/jonas/Documents/code/denoising-np/_output") / exp_name
+    path = Path("[redacted]") / exp_name
     path = ExperimentPath.from_path(path)
     cfg = path.get_config()
     exp = Experiment.from_config(cfg)  # ty: ignore

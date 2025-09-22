@@ -22,9 +22,9 @@ from explore.weather_eval import generate_ensemble
 
 ds = make_gridded_weather_task(
     data_source=ZarrDatasource.from_path(
-        path="/home/jonas/Documents/code/otter/_data/era5_240x121.zarr"
+        path="[redacted]"
     ),
-    norm_path="/home/jonas/Documents/code/otter/otter/data/normalisation/stats",
+    norm_path="[redacted]",
     start_date="2010-01-01",
     end_date="2011-01-01",
     val_start_date="2015-10-19",
@@ -63,8 +63,7 @@ ds = make_gridded_weather_task(
 # exp_name = "2025-07-08_16-32_jolly_narwhal"
 exp_name = "2025-09-05_13-18_radiant_hippo"
 
-# path = Path("/home/jonas/Documents/code/denoising-np/_weights") / exp_name
-path = Path("/home/jonas/Documents/code/denoising-np/_output") / exp_name
+path = Path("[redacted]") / exp_name
 path = ExperimentPath.from_path(path)
 cfg = path.get_config()
 exp = Experiment.from_config(cfg)

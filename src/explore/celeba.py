@@ -9,10 +9,11 @@ from torchvision.utils import make_grid
 
 from cdnp.model.cdnp import CDNP
 from cdnp.util.instantiate import Experiment
+
 #%%
 
 path = Path(
-    "/home/jonas/Documents/code/denoising-np/_weights/2025-06-03_17-53_fantastic_jaguar"
+    "[redacted]"
 )
 path = ExperimentPath.from_path(path)
 cfg = path.get_config()

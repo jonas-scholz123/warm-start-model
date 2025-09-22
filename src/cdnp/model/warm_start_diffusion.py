@@ -143,7 +143,7 @@ class WarmStartDiffusion(nn.Module):
         return samples
 
     def _get_sample_warmth(self, kwargs) -> float:
-        # TODO JONAS!
+        # TODO
         return self.max_warmth
         if "nfe" not in kwargs:
             return self.max_warmth

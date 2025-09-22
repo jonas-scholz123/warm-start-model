@@ -1,11 +1,12 @@
 #%%
-from mlbnb.paths import ExperimentPath
 from pathlib import Path
-from cdnp.util.instantiate import Experiment
 from time import time
 
-path = Path("/home/jonas/Documents/code/denoising-np/_weights/cifar10_cnp_001")
-#path = Path("/home/jonas/Documents/code/denoising-np/_weights/2025-07-21_22-38_playful_xenon")
+from mlbnb.paths import ExperimentPath
+
+from cdnp.util.instantiate import Experiment
+
+path = Path("[redacted]")
 exp_path = ExperimentPath.from_path(path)
 cfg = exp_path.get_config()
 

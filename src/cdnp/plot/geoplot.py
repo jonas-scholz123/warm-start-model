@@ -285,7 +285,7 @@ class GeoPlotBuilder:
         )
 
 
-# TODO (Jonas) add support for units as colorbar labels.
+# TODO add support for units as colorbar labels.
 class GeoVariablePlotter:
     """
     A wrapper around GeoPlotter that provides additional functionality for
