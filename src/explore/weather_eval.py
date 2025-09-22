@@ -3,10 +3,8 @@ import pickle
 from copy import deepcopy
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import torch
 from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath
@@ -319,11 +317,11 @@ def get_power_spectrum_1d(
 if __name__ == "__main__":
     device = "cuda"
 
-    n_t0s = 30
+    n_t0s = 80
     num_bins = 30
     exp_names = [
-        # "2025-09-05_13-18_radiant_hippo",
-        # "2025-09-01_16-29_jolly_whale",
+        "2025-09-05_13-18_radiant_hippo",
+        "2025-09-01_16-29_jolly_whale",
     ]
     nfes = [2, 4, 6, 8, 10, 12, 14, 16, 20, 30, 50, 100]
 
@@ -334,7 +332,7 @@ if __name__ == "__main__":
         },
         {
             "solver": "dpm_solver_3",
-            "skip_type": "time_uniform",
+            "skip_type": "logSNR",
         },
     ]
 
@@ -343,8 +341,6 @@ if __name__ == "__main__":
     for exp_name in exp_names:
         exp = load_experiment(exp_name)
         ds = exp.val_loader.dataset
-
-        plt.figure()
 
         sampler_results = {}
         with torch.no_grad():
@@ -368,7 +364,7 @@ if __name__ == "__main__":
                             skip_type=sampler["skip_type"],
                         )
                         ens_slice = ens[0, 0, :, :, 0, 0]
-                        trg_slice = trg[0, 0, :, :]
+                        trg_slice = trg[0, 0, :, :, 0]
                         ps, wl = get_power_spectrum_1d(
                             ens_slice.cpu(), num_bins=num_bins
                         )
@@ -402,15 +398,18 @@ if __name__ == "__main__":
     # %%
     # exp_name = "2025-07-07_21-13_noble_iguana"
     # exp_name = "2025-09-01_10-06_lucky_dog"
-    exp_name = "2025-09-01_16-29_jolly_whale"
-    # exp_name = "2025-09-05_13-18_radiant_hippo"
+    # exp_name = "2025-09-01_16-29_jolly_whale"
+    # solver = "dpm_solver_3"
+    # skip_type = "logSNR"
+
+    exp_name = "2025-09-05_13-18_radiant_hippo"
+    solver = "midpoint"
+    skip_type = "time_uniform"
 
     n_days = 5
     n_t0s = 40
     n_members = 50
-    nfes = [2, 6, 10, 16, 20, 30]
-    solver = "dpm_solver_3"
-    skip_type = "logSNR"
+    nfes = [4, 8]
 
     for nfe in nfes:
         exp = load_experiment(exp_name)
@@ -469,92 +468,3 @@ if __name__ == "__main__":
         df = pd.concat([df, pd.DataFrame(rows)], ignore_index=True)
         print("Saving to ", csv_path)
         df.to_csv(csv_path, index=False)
-
-    # %%
-
-    # %%
-
-    fig, axs = plt.subplots(1, 3, figsize=(12, 4))
-
-    yticklabels = [
-        f"{w:.0e}" if idx % 5 == 0 else "" for idx, w in enumerate(wl.numpy())
-    ]
-
-    plottable = sampler_results["midpoint"]
-    sns.heatmap(
-        plottable.T,
-        xticklabels=nfes,
-        yticklabels=yticklabels,
-        cmap="vlag",
-        center=1.0,
-        ax=axs[0],
-    )
-
-    plottable = sampler_results["dpm_solver_3"]
-    sns.heatmap(
-        plottable.T,
-        xticklabels=nfes,
-        yticklabels=yticklabels,
-        cmap="vlag",
-        center=1.0,
-        ax=axs[1],
-    )
-
-    axs[0].set_xlabel("NFE")
-    axs[1].set_xlabel("NFE")
-    axs[0].set_ylabel("Wavelength (km)")
-    axs[0].set_title("Midpoint")
-    axs[1].set_title("DPM-Solver")
-    axs[1].set_yticks([], labels=[])
-
-    plottable = sampler_results["best"]
-    abs_diff = np.abs(plottable - 1.0).sum(axis=1)
-    axs[2].plot(nfes, abs_diff, marker="x")
-    axs[2].set_xscale("log")
-    axs[2].set_title("Power Spectrum Deviation (Best)")
-    plt.xlabel("NFE")
-    plot_nfes = [2, 4, 6, 8, 10, 14, 20, 30, 50]
-    plt.xticks(plot_nfes, labels=plot_nfes, rotation=90)
-    plt.show()
-
-    # %%
-
-    time_skip = 4  # plot every 24h
-    trg_and_ensemble = torch.cat([trg.unsqueeze(-1), ensemble], dim=-1)
-    plot_ensemble = trg_and_ensemble[:, :, :, :, ::time_skip, : n_plot_trajectories + 1]
-
-    col_titles = [
-        f"T + {(6 * (i + 1) * time_skip) // 24} days"
-        for i in range(plot_ensemble.shape[4])
-    ]
-
-    row_titles = [f"Member {i + 1}" for i in range(n_plot_trajectories)]
-    row_titles = ["Ground Truth"] + row_titles
-
-    _ = gp.plot_grid(
-        plot_ensemble[0, 1, :, :, :, :].cpu(),
-        col_titles=col_titles,
-        row_titles=row_titles,
-    )
-
-    # %%
-
-    variable_idx = 0
-    # variable_name = ds.trg_variables_and_levels[variable_idx]  # ty: ignore
-    # n_timesteps = trg.shape[4]
-    n_timesteps = n_days * 4
-
-    times_hrs = np.arange(n_timesteps) * 6 + 6
-    times_days = times_hrs / 24
-    for name, result in results.items():
-        plt.figure()
-        # plt.title(f"{name} - {variable_name}")
-        # x with dots and lines:
-        plt.plot(times_hrs, result[variable_idx, :].cpu(), marker="x")
-        ticks = times_hrs[3::4]
-        plt.xticks(ticks, labels=ticks // 24)
-        plt.xlabel("Lead times (days)")
-        plt.ylabel(name)
-        plt.show()
-
-    # %%

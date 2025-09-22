@@ -7,59 +7,85 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-# %%
-
-exp_name = "2025-09-01_16-29_jolly_whale"
-csv_path = f"../../wind_results_{exp_name}.csv"
-df = pd.read_csv(csv_path)
-
-metric = "crps"
-#metric = "ensemble_rmse"
-
-metric_names = {
-    "crps": "CRPS",
-    "ensemble_rmse": "Ensemble RMSE",
+exp_names = {
+    "2025-09-01_16-29_jolly_whale": "Flow Matching + DPM Solver",
+    "2025-09-05_13-18_radiant_hippo": "Warm Flow Matching (Ours)",
 }
 
-metrics = list(metric_names.keys())
-
-df = df[df["n_members"] == 50]
-df = df[df["n_0_times"] == 40]
-df = df[df["metric"] == metric]
-# df = df[df["nfe"] != 2]
-df = df[df["solver"] == "dpm_solver_3"]
-
-nfes = sorted(df["nfe"].unique())
-
-trg_vars = {
-    "10m_u_component_of_wind": "10m U Wind",
-    "10m_v_component_of_wind": "10m V Wind",
+exp_nfes = {
+    "2025-09-01_16-29_jolly_whale": [2, 8, 10, 12, 14, 16, 20, 30],
+    "2025-09-05_13-18_radiant_hippo": [2, 4, 8, 10, 20],
 }
 
+all_nfes = sorted(list(set(nfe for nfes in exp_nfes.values() for nfe in nfes)))
+colors = {nfe: f"C{idx}" for idx, nfe in enumerate(all_nfes)}
 
-fig, axs = plt.subplots(1, len(trg_vars), figsize=(4 * len(trg_vars), 3), sharey=True)
+var = "10m_u_component_of_wind"
+var_name = "10m U Wind"
+# var = "10m_v_component_of_wind"
+# var_name = "10m V Wind"
 
-for i, (var, var_name) in enumerate(trg_vars.items()):
+normed = False
+
+fig, axs = plt.subplots(
+    1, len(exp_names), figsize=(5 * len(exp_names), 2.8), sharey=True
+)
+
+for i, (exp_name, title) in enumerate(exp_names.items()):
+    csv_path = f"../../wind_results_{exp_name}.csv"
+    df = pd.read_csv(csv_path)
+
+    metric = "crps"
+    # metric = "ensemble_rmse"
+
+    metric_names = {
+        "crps": "CRPS",
+        "ensemble_rmse": "Ensemble RMSE",
+    }
+
+    metrics = list(metric_names.keys())
+
+    df = df[df["n_members"] == 50]
+    df = df[df["n_0_times"] == 40]
+    df = df[df["metric"] == metric]
+    nfes = exp_nfes[exp_name]
+    nfes = [nfe for nfe in nfes if nfe in df["nfe"].unique()]
+    # df = df[df["nfe"] != 6]
+    # df = df[df["solver"] == "dpm_solver_3"]
+
     var_df = df[df["variable"] == var]
-    for nfe in nfes:
+
+    nfe_df = var_df[var_df["nfe"] == max(nfes)]
+    best_values = nfe_df["value"].values
+
+    for j, nfe in enumerate(nfes):
         nfe_df = var_df[var_df["nfe"] == nfe]
         nfe_df = nfe_df.sort_values("time_delta_hrs")
         time_delta_hrs = nfe_df["time_delta_hrs"].values
         values = nfe_df["value"].values
         axs[i].plot(
             time_delta_hrs,
-            values,
+            values / best_values if normed else values,
             marker="x",
             label=f"NFE={nfe}",
+            color=colors[nfe],
         )
         time_delta_days = time_delta_hrs // 24
         ticks = time_delta_hrs[3::4]
         labels = time_delta_days[3::4].astype(int)
         axs[i].set_xticks(ticks, labels=labels)
         axs[i].set_xlabel("Lead Time (days)")
-        axs[i].set_title(var_name)
-axs[1].legend()
-axs[0].set_ylabel(metric_names[metric])
+        axs[i].set_title(title)
+        axs[i].set_ylim(1.6, 2.25)
+        axs[i].set_xlim(2 * 24, 5 * 24 + 3)
+    axs[0].legend(ncols=1)
+    axs[1].legend(ncols=1)
+    axs[0].grid(True, linestyle="--", alpha=0.3)
+    axs[1].grid(True, linestyle="--", alpha=0.3)
+    axs[0].set_ylabel(f"{metric_names[metric]} for {var_name}")
+# Reduce horizontal space between subplots:
+fig.subplots_adjust(wspace=0.05)
+fig.savefig(f"crps_{var}.pdf", bbox_inches="tight")
 # %%
 experiments = [
     "2025-09-01_16-29_jolly_whale",
@@ -67,7 +93,7 @@ experiments = [
 ]
 
 experiment_to_title = {
-    "2025-09-01_16-29_jolly_whale": "Cold FM",
+    "2025-09-01_16-29_jolly_whale": "Flow Matching",
     "2025-09-05_13-18_radiant_hippo": "Warm FM (Ours)",
 }
 
@@ -129,7 +155,7 @@ for col, experiment in enumerate(experiments):
 
     axs[-1, 0].set_xlabel("NFE")
     axs[-1, 1].set_xlabel("NFE")
-    axs[0, 0].set_title("$\eta(\lambda)$, Cold FM")
+    axs[0, 0].set_title("$\eta(\lambda)$, Flow Matching")
     axs[0, 1].set_title("$\eta(\lambda)$, Warm FM (Ours)")
     axs[0, 0].set_ylabel("Midpoint Solver\n\n $\lambda$ (km)")
     axs[1, 0].set_ylabel("DPM Solver\n\n $\lambda$ (km)")
@@ -167,3 +193,4 @@ fig.savefig("weather_forecasting_eval.pdf", bbox_inches="tight")
 plt.show()
 # %%
 # yticklabels = [f"{w:.0e}" if idx % 5 == 0 else "" for idx, w in enumerate(wl.numpy())]
+experiment
