@@ -1,0 +1,23 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: inpaint
+  - model: cnp
+  - model/backbone: small
+  - _self_
+
+data:
+  in_channels: 4 # masked RGB input + mask
+  preprocess_fn:
+    min_frac: 0.0
+    max_frac: 1.0
+
+model:
+  backbone:
+    out_channels: 6 # Predicted RGB mean + predicted RGB stddev
+  min_std: 0.01 # Minimum stddev to stabilise
+  device: ${runtime.device}
+
+execution:
+  train_steps: 6000000
+  gradient_clip_norm: 10.0
