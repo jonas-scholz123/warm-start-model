@@ -48,7 +48,13 @@ class WarmStartDiffusion(nn.Module):
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         prd_dist = self.warm_start_model.predict(ctx)
-        std, warmth = self._get_warm_std(prd_dist.stddev)
+        wsm_loss = self.warm_start_model.nll(prd_dist, trg)
+
+        # Don't backprop through the entire model.
+        mean = prd_dist.mean  # .detach()
+        stddev = prd_dist.stddev.detach()
+
+        std, warmth = self._get_warm_std(stddev)
         if self.mean_only_ablation:
             std = torch.ones_like(std, device=self.device)
             warmth = None
@@ -57,10 +63,10 @@ class WarmStartDiffusion(nn.Module):
             trg_n = trg
         else:
             # _n suffix = normalised space
-            trg_n = (trg - prd_dist.mean) / std
+            trg_n = (trg - mean) / std
 
         gen_model_ctx = ModelCtx(
-            image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, std], dim=1),
+            image_ctx=torch.cat([ctx.image_ctx, mean, std], dim=1),
             warmth=warmth,
         )
 
@@ -69,7 +75,12 @@ class WarmStartDiffusion(nn.Module):
         else:
             loss_weight = None
 
-        return self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
+        generative_loss = self.generative_model(
+            gen_model_ctx, trg_n, loss_weight=loss_weight
+        )
+
+        return generative_loss
+        # return wsm_loss + generative_loss
 
     def _get_warm_std(
         self, prd_std: torch.Tensor, warmth: Optional[torch.Tensor] = None
