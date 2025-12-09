@@ -1,4 +1,5 @@
 # %%
+from functools import partial
 from itertools import product
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from mlbnb.paths import ExperimentPath
 
 from cdnp.evaluate import FIDMetric, evaluate
 from cdnp.model.cdnp import CDNP
+from cdnp.task import preprocess_inpaint
 from cdnp.util.instantiate import Experiment
 
 
@@ -22,6 +24,7 @@ def compute_fid(
     skip_type: str,
     warmth: float = 1.0,
     seed: int = 42,
+    ctx_frac: float | None = None,
 ):
     """Computes the FID score for a given experiment and model."""
     torch.manual_seed(seed)
@@ -39,6 +42,15 @@ def compute_fid(
 
     if "ema" in model_name:
         model = exp.ema_model.get_shadow()  # type: ignore
+
+    if ctx_frac is None:
+        preprocess_fn = exp.preprocess_fn
+    else:
+        gen = torch.Generator()
+        gen.manual_seed(seed)
+        preprocess_fn = partial(
+            preprocess_inpaint, min_frac=ctx_frac, max_frac=ctx_frac, gen=gen
+        )
 
     _ = cm.reproduce_model(model, model_name)
 
@@ -64,7 +76,7 @@ def compute_fid(
     result = evaluate(
         model=model,
         dataloader=dataloader,  # type: ignore
-        preprocess_fn=exp.preprocess_fn,
+        preprocess_fn=preprocess_fn,
         metrics=[metric],
         use_tqdm=True,
     )
@@ -75,13 +87,30 @@ if __name__ == "__main__":
     experiments = [
         # "2025-07-21_22-38_playful_xenon",
         # "2025-07-23_15-24_sassy_unicorn_better_cnp",
-        "new_warmth_scaling",
+        # "new_warmth_scaling",
+        "2025-12-04_16-21_xenial_kangaroo"  # standard fm 0-100
     ]
-    nfes = [10, 12, 20, 50, 100]
+    nfes = [2, 4, 6, 8, 12, 20, 50, 100]
     model = "latest_ema"
     solvers = ["dpm_solver_3"]
     default_skip_type = "logSNR"
-    num_samples = 50_000
+    # num_samples = 50_000
+    num_samples = 1000
+    # context_fractions = [None]
+    context_fractions = [
+        0.0,
+        0.01,
+        0.02,
+        0.05,
+        0.1,
+        0.3,
+        0.5,
+        0.8,
+        0.9,
+        0.95,
+        0.98,
+        0.99,
+    ]
 
     all_args = []
 
@@ -101,7 +130,9 @@ if __name__ == "__main__":
             ]
         )
 
-    for experiment, nfe, solver in product(experiments, nfes, solvers):
+    for experiment, nfe, solver, ctx_frac in product(
+        experiments, nfes, solvers, context_fractions
+    ):
         # Log snr is bad for these very low NFEs because you need at least a few points
         # in the middle, that you don't get. Fall back to uniform.
         if nfe <= 5 or solver == "euler" or solver == "midpoint":
@@ -121,6 +152,7 @@ if __name__ == "__main__":
             & (df["solver"] == solver)
             & (df["skip_type"] == skip_type)
             & (df["num_samples"] == num_samples)
+            & (df["ctx_frac"] == ctx_frac)
         ).any()
 
         if exists:
@@ -133,6 +165,7 @@ if __name__ == "__main__":
                 nfe=nfe,
                 solver=solver,
                 skip_type=skip_type,
+                ctx_frac=ctx_frac,
             )
 
             fid = result[f"fid_nfe={nfe}"]
@@ -146,6 +179,7 @@ if __name__ == "__main__":
                 "skip_type": skip_type,
                 "num_samples": num_samples,
                 "fid": fid,
+                "ctx_frac": ctx_frac,
             }
             print(new_row)
             print(f"Computed FID: {fid}")
