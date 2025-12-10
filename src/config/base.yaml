@@ -17,6 +17,7 @@ paths:
   raw_data: ${runtime.root}/_data/_raw
   output: ${runtime.root}/_output
   weights: ${runtime.root}/_weights
+  normalisation: ${runtime.root}/_normalisation
 
 execution:
   train_steps: ???

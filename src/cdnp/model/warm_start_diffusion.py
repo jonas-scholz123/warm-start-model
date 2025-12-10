@@ -1,5 +1,6 @@
 from typing import Optional
 
+import numpy as np
 import torch
 from torch import nn
 from torch.distributions import Normal
@@ -14,7 +15,7 @@ from cdnp.model.flow_matching.flow_matching import FlowMatching
 class WarmStartDiffusion(nn.Module):
     def __init__(
         self,
-        warm_start_model: CNP,
+        warm_start_model: CNP | None,
         generative_model: DDPM | FlowMatching,
         loss_weighting: bool,
         device: str,
@@ -23,8 +24,14 @@ class WarmStartDiffusion(nn.Module):
         max_warmth: float = 1.0,
         mean_only_ablation: bool = False,
         feature_only_ablation: bool = False,
+        norm_param_path: str | None = None,
     ):
         super().__init__()
+        if warm_start_model is None and norm_param_path is None:
+            raise ValueError(
+                "Either warm_start_model or norm_param_path must be provided."
+            )
+
         self.warm_start_model = warm_start_model
         self.generative_model = generative_model
         self.min_warmth = min_warmth
@@ -32,6 +39,16 @@ class WarmStartDiffusion(nn.Module):
         self.mean_only_ablation = mean_only_ablation
         self.feature_only_ablation = feature_only_ablation
         self.min_std = min_std
+
+        if norm_param_path is None:
+            self.prd_dist = None
+        else:
+            norm_params = np.load(norm_param_path)
+            mean = torch.tensor(norm_params["mean"], device=device)
+            std = torch.tensor(norm_params["std"], device=device)
+            mean = mean.unsqueeze(0)
+            std = std.unsqueeze(0)
+            self.prd_dist = Normal(mean, std)
 
         self.loss_weighting = loss_weighting
 
@@ -47,7 +64,11 @@ class WarmStartDiffusion(nn.Module):
             raise ValueError("Cannot use both mean-only and feature-only ablation.")
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
-        prd_dist = self.warm_start_model.predict(ctx)
+        if self.prd_dist is None:
+            prd_dist = self.warm_start_model.predict(ctx)
+        else:
+            prd_dist = self.prd_dist
+
         std, warmth = self._get_warm_std(prd_dist.stddev)
         if self.mean_only_ablation:
             std = torch.ones_like(std, device=self.device)
@@ -60,7 +81,7 @@ class WarmStartDiffusion(nn.Module):
             trg_n = (trg - prd_dist.mean) / std
 
         gen_model_ctx = ModelCtx(
-            image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, std], dim=1),
+            image_ctx=self._build_image_ctx(ctx, prd_dist, std, trg_n.shape[0]),
             warmth=warmth,
         )
 
@@ -95,6 +116,20 @@ class WarmStartDiffusion(nn.Module):
         scaled_std = warmth * prd_std + (1 - warmth) * base_std
         return scaled_std, warmth.squeeze()
 
+    def _build_image_ctx(
+        self, ctx: ModelCtx, prd_dist: Normal, std: torch.Tensor, batch_size: int
+    ) -> torch.Tensor:
+        shape = [batch_size] + list(prd_dist.mean.shape[1:])
+
+        # Awkward order for backward compatibility.
+        image_ctx = []
+        if ctx.image_ctx is not None:
+            image_ctx.append(ctx.image_ctx)
+        image_ctx.append(prd_dist.mean.expand(shape))
+        image_ctx.append(std.expand(shape))
+
+        return torch.cat(image_ctx, dim=1)
+
     @torch.no_grad()
     def sample(self, ctx: ModelCtx, num_samples: int = 0, **kwargs) -> torch.Tensor:
         """
@@ -103,9 +138,13 @@ class WarmStartDiffusion(nn.Module):
         :ctx: Context labels for the generation process.
         """
         # For conditional generation, generate samples based on the context.
-        num_samples = ctx.image_ctx.shape[0]
-        prd_dist = self.warm_start_model.predict(ctx)
-        prd_dist = Normal(prd_dist.mean, prd_dist.stddev)
+        if ctx.image_ctx is not None:
+            num_samples = ctx.image_ctx.shape[0]
+        if self.prd_dist is None:
+            prd_dist = self.warm_start_model.predict(ctx)
+            prd_dist = Normal(prd_dist.mean, prd_dist.stddev)
+        else:
+            prd_dist = self.prd_dist
 
         initial_warmth = kwargs.get("warmth", self._get_sample_warmth(kwargs))
 
@@ -123,7 +162,7 @@ class WarmStartDiffusion(nn.Module):
             warmth = None
 
         gen_model_ctx = ModelCtx(
-            image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, std], dim=1),
+            image_ctx=self._build_image_ctx(ctx, prd_dist, std, num_samples),
             warmth=warmth,
         )
 
