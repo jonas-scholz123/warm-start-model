@@ -28,8 +28,12 @@ def preprocess_inpaint(
     gen: torch.Generator,
     min_frac: float,
     max_frac: float,
+    seed: int | None = None,
 ) -> tuple[ModelCtx, torch.Tensor]:
     x, _ = batch
+
+    if seed is not None:
+        gen = torch.Generator().manual_seed(seed)
 
     frac = torch.rand(1, generator=gen).item()
     frac = frac * (max_frac - min_frac) + min_frac
@@ -77,7 +81,11 @@ def preprocess_weather_inpaint(
     gen: torch.Generator,
     min_frac: float,
     max_frac: float,
+    seed: int | None = None,
 ) -> tuple[ModelCtx, torch.Tensor]:
+    if seed is not None:
+        gen = torch.Generator().manual_seed(seed)
+
     zero_time, static, dyn, _ = batch
 
     B, lat, lon, time, var = dyn.shape
