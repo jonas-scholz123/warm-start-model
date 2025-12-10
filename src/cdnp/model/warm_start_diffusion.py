@@ -23,6 +23,7 @@ class WarmStartDiffusion(nn.Module):
         max_warmth: float = 1.0,
         mean_only_ablation: bool = False,
         feature_only_ablation: bool = False,
+        end_to_end: bool = True,
     ):
         super().__init__()
         self.warm_start_model = warm_start_model
@@ -34,6 +35,12 @@ class WarmStartDiffusion(nn.Module):
         self.min_std = min_std
 
         self.loss_weighting = loss_weighting
+        self.end_to_end = end_to_end
+
+        if end_to_end:
+            self.warm_start_model.requires_grad_(True)
+        else:
+            self.warm_start_model.requires_grad_(False)
 
         self.scale_warmth = self.min_warmth != 1.0 or self.max_warmth != 1.0
         self.device = device
@@ -48,7 +55,10 @@ class WarmStartDiffusion(nn.Module):
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         prd_dist = self.warm_start_model.predict(ctx)
-        std, warmth = self._get_warm_std(prd_dist.stddev)
+        mean = prd_dist.mean
+        std = prd_dist.stddev.detach()
+
+        std, warmth = self._get_warm_std(std)
         if self.mean_only_ablation:
             std = torch.ones_like(std, device=self.device)
             warmth = None
@@ -57,10 +67,10 @@ class WarmStartDiffusion(nn.Module):
             trg_n = trg
         else:
             # _n suffix = normalised space
-            trg_n = (trg - prd_dist.mean) / std
+            trg_n = (trg - mean) / std
 
         gen_model_ctx = ModelCtx(
-            image_ctx=torch.cat([ctx.image_ctx, prd_dist.mean, std], dim=1),
+            image_ctx=torch.cat([ctx.image_ctx, mean, std], dim=1),
             warmth=warmth,
         )
 
@@ -69,7 +79,14 @@ class WarmStartDiffusion(nn.Module):
         else:
             loss_weight = None
 
-        return self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
+        loss = self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
+        if self.end_to_end:
+            # We want the mean to be driven by the generative loss and the
+            # std to be driven by the NLL loss.
+            detached_prd_dist = Normal(prd_dist.mean.detach(), prd_dist.stddev)
+            # loss += 0.01 * self.warm_start_model.nll(detached_prd_dist, trg)
+
+        return loss
 
     def _get_warm_std(
         self, prd_std: torch.Tensor, warmth: Optional[torch.Tensor] = None
