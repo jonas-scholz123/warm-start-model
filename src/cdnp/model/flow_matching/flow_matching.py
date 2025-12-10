@@ -127,7 +127,7 @@ class FlowMatching(nn.Module):
 
         u_t = path_sample.dx_t
 
-        if ctx.label_ctx:
+        if ctx.label_ctx is not None:
             # TODO?
             logger.warning(
                 "Conditional flow-matching generation is not yet implemented."
@@ -156,7 +156,7 @@ class FlowMatching(nn.Module):
         gen = kwargs.get("gen", None)
         x_T = torch.randn(*shape, generator=gen).to(self.device)
 
-        if ctx.label_ctx:
+        if ctx.label_ctx is not None:
             logger.warning(
                 "Conditional flow-matching generation is not yet implemented."
             )
