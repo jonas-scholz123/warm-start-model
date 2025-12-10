@@ -2,7 +2,7 @@ defaults:
   - base
   - data: cifar10
   - task: imgen
-  - model: flow_matching
+  - model: warm_start_fm
   - _self_
 
 execution:
@@ -34,9 +34,13 @@ output:
       nfe: 5
 
 model:
-  backbone:
-    in_channels: 3 # noised RGB image
-    out_channels: 3 # RGB image
+  # Load static mean & std.
+  norm_param_path: ${paths.normalisation}/cifar10_normalisation.npz
+  warm_start_model: null
+  generative_model:
+    backbone:
+      in_channels: 9 # noised RGB image + Std + mean
+      out_channels: 3 # RGB image
 
 optimizer:
   lr: 1e-4

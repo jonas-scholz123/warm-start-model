@@ -25,6 +25,7 @@ class Paths:
     raw_data: Path
     output: Path
     weights: Path
+    normalisation: Path
 
 
 @dataclass
