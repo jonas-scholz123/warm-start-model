@@ -6,7 +6,7 @@ defaults:
   - _self_
 
 execution:
-  train_steps: 300000
+  train_steps: 3000000
   gradient_clip_norm: 3.0
   accumulate_steps: 4 # Effective batch size = 512, matching the repo
   ema_rate: 0.999
