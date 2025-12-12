@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+import matplotlib.pyplot as plt
 import torch
 import wandb
 from loguru import logger
@@ -11,7 +12,6 @@ from torch.utils.data import Dataset
 from torch.utils.data._utils.collate import default_collate
 from torchvision.utils import make_grid, save_image
 
-import matplotlib.pyplot as plt
 from cdnp.data.era5 import GriddedWeatherTask
 from cdnp.model.cdnp import CDNP
 from cdnp.model.cnp import CNP
@@ -58,7 +58,9 @@ class BasePlotter(ABC):
     def _log_to_wandb(self, data: Any, step: int, name: str) -> None:
         """Logs plots to wandb if available."""
         if wandb.run:
-            wandb.log({f"plots/{name}": wandb.Image(data, caption=f"Step {step}")}, step=step)
+            wandb.log(
+                {f"plots/{name}": wandb.Image(data, caption=f"Step {step}")}, step=step
+            )
 
 
 class CcgenPlotter(BasePlotter):
@@ -174,6 +176,51 @@ class InpaintPlotter(BasePlotter):
         if self._dir:
             save_image(grid, self._get_path(step))
         self._log_to_wandb(grid, step, "inpaint")
+
+
+class ColourisationPlotter(BasePlotter):
+    def __init__(
+        self,
+        device: str | torch.device,
+        num_samples: int,
+        norm_means: tuple[float, ...],
+        norm_stds: tuple[float, ...],
+        test_data: Dataset,
+        preprocess_fn: Callable[[Any], tuple[ModelCtx, torch.Tensor]],
+        save_to: Optional[ExperimentPath] = None,
+    ):
+        super().__init__(device, norm_means, norm_stds, save_to)
+        self._num_samples = num_samples
+        self._dataset = test_data
+        self._preprocess_fn = preprocess_fn
+
+        test_elements = []
+        for i in range(self._num_samples):
+            test_elements.append(self._dataset[i])
+        batch = default_collate(test_elements)
+        self.ctx, self.trg = self._preprocess_fn(batch)
+        self.ctx = self.ctx.to(self._device)
+        self.trg = self.trg.to(self._device)
+
+    @torch.no_grad()
+    def plot_prediction(self, model: DDPM | CNP | CDNP, step: int = 0) -> None:
+        plottables = []
+        x_gen = model.make_plot(self.ctx)
+        for x in x_gen:
+            x = self._unnormalize(x)
+            plottables.append(x)
+
+        grayscale = self.ctx.image_ctx
+        grayscale = self._unnormalize(grayscale)
+        trg = self._unnormalize(self.trg)
+
+        plottables = [trg, grayscale] + plottables
+
+        x_gen = torch.cat(plottables, dim=0)
+        grid = make_grid(x_gen, nrow=self._num_samples)
+        if self._dir:
+            save_image(grid, self._get_path(step))
+        self._log_to_wandb(grid, step, "colourisation")
 
 
 class ForecastPlotter(BasePlotter):

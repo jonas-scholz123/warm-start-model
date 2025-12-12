@@ -1,0 +1,48 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: colourisation
+  - model: flow_matching
+  - _self_
+
+execution:
+  train_steps: 3000000
+  gradient_clip_norm: 3.0
+  accumulate_steps: 4 # Effective batch size = 512, matching the repo
+  ema_rate: 0.999
+
+output:
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 1000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
+      nfe: 50
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 1000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
+      nfe: 10
+    - _target_: cdnp.evaluate.FIDMetric
+      num_samples: 1000
+      means: ${data.dataset.norm_means}
+      stds: ${data.dataset.norm_stds}
+      device: ${runtime.device}
+      nfe: 5
+
+model:
+  backbone:
+    in_channels: 4 # noised RGB image + grayscale image
+    out_channels: 3 # RGB image
+
+
+optimizer:
+  lr: 1e-4
+  betas: [0.9, 0.95]
+
+data:
+  trainloader:
+    batch_size: 128

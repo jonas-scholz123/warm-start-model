@@ -48,6 +48,15 @@ def preprocess_inpaint(
     return ModelCtx(image_ctx=ctx), x
 
 
+def preprocess_colourisation(
+    batch: tuple[torch.Tensor, torch.Tensor],
+) -> tuple[ModelCtx, torch.Tensor]:
+    x, _ = batch
+    # Convert to grayscale by averaging the color channels
+    grayscale = x.mean(dim=1, keepdim=True)
+    return ModelCtx(image_ctx=grayscale), x
+
+
 def preprocess_weather_forecast(
     batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor],
 ) -> tuple[ModelCtx, torch.Tensor]:
