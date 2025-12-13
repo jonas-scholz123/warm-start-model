@@ -1,0 +1,22 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: colourisation
+  - model: warm_start_fm
+  - model_type: generative
+  - _self_
+
+model:
+  warm_start_model:
+    _target_: cdnp.util.instantiate.load_model_from_path
+    path: ${paths.weights}/cifar10_cnp_colourisation
+    freeze: true
+    device: ${runtime.device}
+  generative_model:
+    backbone:
+      in_channels: 10 # noised RGB image + grayscale image + CNP mean + CNP stddev
+      out_channels: 3 # RGB image
+
+data:
+  trainloader:
+    batch_size: 128
