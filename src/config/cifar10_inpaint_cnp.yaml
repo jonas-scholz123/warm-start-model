@@ -4,6 +4,7 @@ defaults:
   - task: inpaint
   - model: cnp
   - model/backbone: small
+  - model_type: deterministic
   - _self_
 
 data:
@@ -17,7 +18,3 @@ model:
     out_channels: 6 # Predicted RGB mean + predicted RGB stddev
   min_std: 0.01 # Minimum stddev to stabilise
   device: ${runtime.device}
-
-execution:
-  train_steps: 6000000
-  gradient_clip_norm: 10.0

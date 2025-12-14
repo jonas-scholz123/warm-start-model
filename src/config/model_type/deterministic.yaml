@@ -1,0 +1,5 @@
+# @package _global_
+
+execution:
+  train_steps: 6000000
+  gradient_clip_norm: 10.0

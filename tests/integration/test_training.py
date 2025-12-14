@@ -10,15 +10,13 @@ from cdnp.train import Trainer
 from config.config import Config, init_configs
 
 
-@pytest.mark.parametrize(
-    "config_name",
-    [
-        "cifar10_ccgen",
-        "mnist_ccgen",
-        "mnist_inpaint",
-        "cifar10_inpaint",
-    ],
-)
+def get_config_names() -> list[str]:
+    """Returns all config names in src/config, excluding base.yaml."""
+    config_dir = Path(__file__).parents[2] / "src" / "config"
+    return [f.stem for f in config_dir.glob("*.yaml") if f.name != "base.yaml"]
+
+
+@pytest.mark.parametrize("config_name", get_config_names())
 def test_training_works(tmpdir: Path, config_name: str) -> None:
     """Checks that the config initializes as expected."""
 
@@ -31,7 +29,15 @@ def test_training_works(tmpdir: Path, config_name: str) -> None:
         overrides=[
             "mode=dev",
             "execution.train_steps=20",
-            f"runtime.root={tmpdir}",
+            "data.trainloader.batch_size=2",
+            "data.trainloader.num_workers=0",
+            "data.trainloader.persistent_workers=false",
+            "data.trainloader.prefetch_factor=null",
+            "data.testloader.batch_size=2",
+            "data.testloader.num_workers=0",
+            "data.testloader.persistent_workers=false",
+            "data.testloader.prefetch_factor=null",
+            f"paths.output={tmpdir / 'output'}",
         ],
     )
 

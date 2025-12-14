@@ -1,14 +1,14 @@
 defaults:
   - base
   - data: cifar10
-  - task: imgen
+  - task: colourisation
   - model: flow_matching
   - model_type: generative
   - _self_
 
 model:
   backbone:
-    in_channels: 3 # noised RGB image
+    in_channels: 4 # noised RGB image + grayscale image
     out_channels: 3 # RGB image
 
 data:

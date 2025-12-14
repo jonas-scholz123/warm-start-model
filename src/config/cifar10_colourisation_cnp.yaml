@@ -1,17 +1,14 @@
 defaults:
   - base
   - data: cifar10
-  - task: inpaint
+  - task: colourisation
   - model: cnp
   - model/backbone: small
   - model_type: deterministic
   - _self_
 
 data:
-  in_channels: 4 # masked RGB input + mask
-  preprocess_fn:
-    min_frac: 0.0
-    max_frac: 1.0
+  in_channels: 1 # Grayscale image
 
 model:
   backbone:
