@@ -10,7 +10,6 @@ model:
   backbone:
     in_channels: 7 # noised RGB image + masked RGB input + mask + CNP mean + CNP stddev
     out_channels: 3 # RGB image
-  skip_type: edm
 
 data:
   trainloader:
