@@ -1,0 +1,29 @@
+defaults:
+  - base
+  - data: afhq
+  - task: inpaint
+  - model: flow_matching_no_attention
+  - model_type: generative
+  - _self_
+
+# Eval is very slow because of the FID computation, so we do it less often
+output:
+  eval_freq: 100000
+  plot_freq: 100000
+
+model:
+  backbone:
+    in_channels: 7 # noised RGB image + masked RGB input + mask
+    out_channels: 3 # RGB image
+
+data:
+  trainloader:
+    batch_size: 4
+  testloader:
+    batch_size: 8
+  preprocess_fn:
+    min_frac: 0.05
+    max_frac: 0.05
+
+execution:
+  accumulate_steps: 128 # 512 effective batch size

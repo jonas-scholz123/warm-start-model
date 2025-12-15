@@ -222,7 +222,11 @@ class Trainer:
         dry_run = self.cfg.execution.dry_run
 
         for batch in train_iter:
-            if self.state.step % self.cfg.output.eval_freq == 0 or dry_run:
+            if (
+                self.state.step % self.cfg.output.eval_freq == 0
+                and self.state.step != 0
+                or dry_run
+            ):
                 logger.info("Evaluating on validation set")
                 val_metrics = evaluate(
                     self.inference_model,
@@ -240,7 +244,11 @@ class Trainer:
                     s.best_val_loss = s.val_loss
                     self.save_checkpoint(CheckpointOccasion.BEST)
 
-            if self.state.step % self.cfg.output.plot_freq == 0 or dry_run:
+            if (
+                self.state.step % self.cfg.output.plot_freq == 0
+                and self.state.step != 0
+                or dry_run
+            ):
                 logger.info("Plotting predictions")
                 if self.plotter:
                     self.plotter.plot_prediction(self.inference_model, self.state.step)
