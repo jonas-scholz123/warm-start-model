@@ -22,7 +22,7 @@ data:
   testloader:
     batch_size: 8
   preprocess_fn:
-    min_frac: 0.05
+    min_frac: 0.01
     max_frac: 0.05
 
 execution:
