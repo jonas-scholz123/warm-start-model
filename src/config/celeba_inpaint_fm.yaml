@@ -13,7 +13,6 @@ model:
   backbone:
     in_channels: 7 # noised RGB image + masked RGB input + mask
     out_channels: 3 # RGB image
-  skip_type: edm
 
 optimizer:
   lr: 1e-4
