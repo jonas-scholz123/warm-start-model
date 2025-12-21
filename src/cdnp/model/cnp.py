@@ -78,6 +78,6 @@ class CNP(nn.Module):
 
     def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:
         pred = self.predict(ctx)
-        masked_image = ctx.image_ctx[:, -3:, :, :]
-        mask = ctx.image_ctx[:, :1, :, :].repeat(1, 3, 1, 1)
+        masked_image = ctx.image_ctx[:, -3:, :, :]  # type: ignore
+        mask = ctx.image_ctx[:, :1, :, :].repeat(1, 3, 1, 1)  # type: ignore
         return [mask, masked_image, pred.mean, pred.stddev, pred.sample()]

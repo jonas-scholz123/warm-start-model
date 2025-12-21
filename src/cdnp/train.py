@@ -1,5 +1,5 @@
 import warnings
-from typing import Callable, Optional
+from typing import Optional
 
 import hydra
 import numpy as np
@@ -75,7 +75,7 @@ class Trainer:
     plotter: Optional[CcgenPlotter]
     state: TrainerState
     preprocess_fn: PreprocessFn
-    metrics: list[Callable]
+    metrics: list[Metric]
 
     def __init__(
         self,
@@ -250,7 +250,7 @@ class Trainer:
                 self.save_checkpoint(CheckpointOccasion.LATEST)
 
             if self.state.step % 500 == 0 and hasattr(self.model, "set_steps"):
-                self.model.set_steps(self.state.step)
+                self.model.set_steps(self.state.step)  # type: ignore
 
             self.model.train()
             self.train_step(batch)
@@ -262,7 +262,7 @@ class Trainer:
         logger.success("Finished training")
         if self.final_metrics:
             eval_loader = self.val_loader
-            if len(self.val_loader.dataset) < 50_000:
+            if len(self.val_loader.dataset) < 50_000:  # type: ignore
                 logger.warning(
                     "Validation set is small, using training set for final evaluation."
                 )

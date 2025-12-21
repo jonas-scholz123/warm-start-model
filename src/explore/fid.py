@@ -51,6 +51,12 @@ if __name__ == "__main__":
         default=42,
         help="Random seed for reproducibility",
     )
+    parser.add_argument(
+        "--ctx-frac",
+        type=float,
+        default=None,
+        help="Fraction of context images to use",
+    )
     args = parser.parse_args()
 
     result = compute_fid(
@@ -62,6 +68,7 @@ if __name__ == "__main__":
         skip_type=args.skip_type,
         warmth=args.warmth,
         seed=args.seed,
+        ctx_frac=args.ctx_frac,
     )
 
     print("Args:", args)

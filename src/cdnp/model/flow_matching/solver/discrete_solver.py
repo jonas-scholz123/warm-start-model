@@ -98,7 +98,7 @@ class MixtureDiscreteEulerSolver(Solver):
         return_intermediates: bool = False,
         verbose: bool = False,
         **model_extras,
-    ) -> Tensor:
+    ) -> Tensor:  # type: ignore
         """
         Sample a sequence of discrete values from the given model.
 

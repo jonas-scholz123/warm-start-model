@@ -1,6 +1,6 @@
 import torch
 from diffusers import DDPMScheduler, UNet2DModel
-from torch import nn
+from torch import IntTensor, nn
 
 from cdnp.model.ctx import ModelCtx
 
@@ -35,13 +35,13 @@ class DDPM(nn.Module):
 
         noise = torch.randn_like(trg)
         shape = (trg.shape[0],)
-        timesteps = (
+        timesteps: IntTensor = (
             torch.randint(0, self.num_timesteps - 1, shape).long().to(self.device)
-        )
-        noisy_x = self.noise_scheduler.add_noise(trg, noise, timesteps)
+        )  # type: ignore
+        noisy_x = self.noise_scheduler.add_noise(trg, noise, timesteps)  # type: ignore
         model_input = self._cat_ctx(noisy_x, ctx)
 
-        pred = self.backbone(model_input, timesteps, class_labels=labels).sample
+        pred = self.backbone(model_input, timesteps, class_labels=labels).sample  # type: ignore
 
         return self.loss_fn(pred, noise)
 
@@ -72,11 +72,11 @@ class DDPM(nn.Module):
         x = torch.randn(*shape).to(self.device)
         labels = ctx.label_ctx
 
-        for t in self.noise_scheduler.timesteps:
+        for t in self.noise_scheduler.timesteps:  # type: ignore
             model_input = self._cat_ctx(x, ctx)
-            residual = self.backbone(model_input, t, labels).sample
+            residual = self.backbone(model_input, t, labels).sample  # type: ignore
             # Update sample with step
-            x = self.noise_scheduler.step(residual, t, x).prev_sample
+            x = self.noise_scheduler.step(residual, t, x).prev_sample  # type: ignore
         return x
 
     def make_plot(self, ctx: ModelCtx) -> list[torch.Tensor]:

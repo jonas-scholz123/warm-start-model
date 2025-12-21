@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 import torch
+from torch import nn
 from torch.amp import autocast
 from torch.utils.data.dataloader import DataLoader
 from torchmetrics.image.fid import FrechetInceptionDistance
@@ -87,14 +88,14 @@ class FIDMetric(Metric):
             ctx, num_samples=num_samples, nfe=self.nfe, **self.sample_kwargs
         )
         fake_images = unnormalise(fake_images, self.means, self.stds)
-        self.fid.update(fake_images, real=False)
+        self.fid.update(fake_images, real=False)  # type: ignore
 
         real_images = unnormalise(trg, self.means, self.stds)
-        self.fid.update(real_images, real=True)
+        self.fid.update(real_images, real=True)  # type: ignore
         self.count += real_images.shape[0]
 
     def compute(self) -> float:
-        result = self.fid.compute().item()
+        result = self.fid.compute().item()  # type: ignore
         self.fid.reset()
         self.count = 0
         return result
@@ -130,7 +131,7 @@ class CnpRmseMetric(Metric):
 
 @torch.no_grad()
 def evaluate(
-    model: CDNP | DDPM | CNP,
+    model: nn.Module,
     dataloader: DataLoader,
     preprocess_fn: PreprocessFn,
     metrics: list[Metric],
@@ -148,7 +149,7 @@ def evaluate(
             trg = trg.to(device)
 
             for metric in metrics:
-                metric.update(model, ctx, trg)
+                metric.update(model, ctx, trg)  # type: ignore
 
             if dry_run:
                 break

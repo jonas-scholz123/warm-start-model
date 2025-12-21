@@ -10,6 +10,7 @@ from torchvision.utils import make_grid
 from cdnp.evaluate import FIDMetric, evaluate
 from cdnp.model.cdnp import CDNP
 from cdnp.util.instantiate import Experiment
+from config.config import Config
 
 
 def unnormalise(tensor: torch.Tensor) -> torch.Tensor:
@@ -51,9 +52,9 @@ if not exp_path.exists():
     exp_path = Path("../../_output") / args.experiment
 
 path = ExperimentPath.from_path(exp_path)
-cfg = path.get_config()
+cfg: Config = path.get_config()  # type: ignore
 exp = Experiment.from_config(cfg)
-model: CDNP = exp.model
+model: CDNP = exp.model  # type: ignore
 cm = CheckpointManager(path)
 
 if "ema" in args.model:
@@ -62,6 +63,7 @@ else:
     model_to_load = model
 
 _ = cm.reproduce_model(model_to_load, args.model)
+model_to_load: CDNP = model_to_load  # type: ignore
 mean = cfg.data.dataset.norm_means
 std = cfg.data.dataset.norm_stds
 # %%
@@ -93,6 +95,7 @@ batch = next(iter(exp.val_loader))
 ctx, trg = exp.preprocess_fn(batch)
 ctx = ctx.to("cuda")
 trg = trg.to("cuda")
+assert ctx.image_ctx is not None
 ctx.image_ctx = ctx.image_ctx[5 : 5 + num_samples]
 trg = trg[5 : 5 + num_samples]
 masked_x = ctx.image_ctx[:, :-1, :, :]
