@@ -91,7 +91,7 @@ class RuntimeConfig:
 
 @dataclass
 class Config:
-    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)
+    runtime: RuntimeConfig = field(default_factory=RuntimeConfig)  # type: ignore
     data: DataConfig = MISSING
     rng: RngConfig = MISSING
     model: dict = MISSING

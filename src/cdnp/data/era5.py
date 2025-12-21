@@ -200,7 +200,7 @@ class ZarrDatasource:
             ds = ds[index_coords["variable_and_level"]]
             del index_coords["variable_and_level"]
 
-        ds = ds.sel(**index_coords)
+        ds: xr.Dataset = ds.sel(**index_coords)  # type: ignore
         return ZarrDatasource(ds)
 
     def to_numpy(self) -> npt.NDArray[Any]:
@@ -365,10 +365,10 @@ class GriddedWeatherTask(
         return length
 
     def __getitem__(
-        self, idx: int
+        self, index: int
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        idx = idx * self.task_sub_sampling_factor
-        zero_time = self.first_zero_time + idx * BASE_TEMPORAL_RESOLUTION
+        index = index * self.task_sub_sampling_factor
+        zero_time = self.first_zero_time + index * BASE_TEMPORAL_RESOLUTION
         context_times = zero_time + self.context_timedeltas
         target_times = zero_time + self.target_timedeltas
 
@@ -390,7 +390,7 @@ class GriddedWeatherTask(
         ctx_tensor = self.normalise_ctx(dyn_ctx)
         trg_tensor = self.normalise_trg(trg_tensor)
 
-        zero_time = _get_hours_from_reference_time(zero_time)
+        zero_time = _get_hours_from_reference_time(zero_time)  # type: ignore
 
         return torch.tensor(zero_time), self.static_ctx, ctx_tensor, trg_tensor
 

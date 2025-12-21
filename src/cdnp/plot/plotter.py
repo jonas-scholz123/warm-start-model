@@ -8,6 +8,7 @@ import torch
 import wandb
 from loguru import logger
 from mlbnb.paths import ExperimentPath
+from torch import nn
 from torch.utils.data import Dataset
 from torch.utils.data._utils.collate import default_collate
 from torchvision.utils import make_grid, save_image
@@ -53,6 +54,8 @@ class BasePlotter(ABC):
         """
         Generate a path for saving the plot image.
         """
+        if not self._dir:
+            raise ValueError("No directory specified for saving plots.")
         return self._dir / f"{filename}_ep{step}.png"
 
     def _log_to_wandb(self, data: Any, step: int, name: str) -> None:
@@ -79,7 +82,7 @@ class CcgenPlotter(BasePlotter):
         self._num_classes = num_classes
 
     @torch.no_grad()
-    def plot_prediction(self, model: DDPM, step: int = 0) -> None:
+    def plot_prediction(self, model: nn.Module, step: int = 0) -> None:
         logger.info("Making and saving prediction plots")
         class_labels = (
             torch.arange(self._num_classes)
@@ -91,7 +94,7 @@ class CcgenPlotter(BasePlotter):
         ctx = ModelCtx(label_ctx=class_labels)
 
         total_samples = self._num_samples * self._num_classes
-        x_gen = model.sample(ctx, total_samples)
+        x_gen = model.sample(ctx, total_samples)  # type: ignore
         x_gen = self._unnormalize(x_gen)
 
         grid = make_grid(x_gen, nrow=self._num_classes)
@@ -210,7 +213,7 @@ class ColourisationPlotter(BasePlotter):
             x = self._unnormalize(x)
             plottables.append(x)
 
-        grayscale = self.ctx.image_ctx
+        grayscale: torch.Tensor = self.ctx.image_ctx  # type: ignore
         grayscale = self._unnormalize(grayscale)
         trg = self._unnormalize(self.trg)
 

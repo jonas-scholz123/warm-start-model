@@ -40,5 +40,17 @@ requires-python = ">=3.11.0"
 readme = "README.md"
 license = { text = "MIT" }
 
+[tool.ty.environment]
+root = ["./src"]
+
 [tool.ty.src]
-root = "./src"
+exclude = ["src/cdnp/model/meta", "src/explore", "src/cdnp/model/flow_matching"]
+
+[tool.ruff]
+exclude = ["src/cdnp/model/meta", "src/explore", "src/cdnp/model/flow_matching"]
+ignore = ["E741", "E731"]
+
+[tool.ty.rules]
+unresolved-attribute = "ignore"
+non-subscriptable = "ignore"
+unsupported-operator = "ignore"
