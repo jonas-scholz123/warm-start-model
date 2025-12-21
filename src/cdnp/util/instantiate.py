@@ -134,7 +134,7 @@ def load_config(
     all_overrides = [f"mode={mode}"] + (overrides or [])
 
     if not GlobalHydra.instance().is_initialized():
-        with initialize(config_path=config_path):
+        with initialize(config_path=config_path, version_base=None):
             cfg: Config = compose(  # type: ignore
                 config_name=config_name, overrides=all_overrides
             )
