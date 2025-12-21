@@ -1,6 +1,7 @@
 import torch
 from diffusers import UNet2DModel
 
+from cdnp.model.meta.unet import UNetModel
 from cdnp.model.swin.utils import geopad
 
 
@@ -16,7 +17,7 @@ def round_up_to_power_of_two(n):
 
 
 def padded_forward(
-    model: UNet2DModel, x: torch.Tensor, *args, **kwargs
+    model: UNet2DModel | UNetModel, x: torch.Tensor, *args, **kwargs
 ) -> torch.Tensor:
     height, width = x.shape[2], x.shape[3]
     padded_height = round_up_to_power_of_two(height)

@@ -10,7 +10,7 @@ from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath
 from mlbnb.types import Split
 from omegaconf import OmegaConf
-from torch import Generator
+from torch import Generator, Tensor
 from torch.nn import Module
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
@@ -36,7 +36,7 @@ class Experiment:
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
     plotter: Optional[CcgenPlotter]
-    preprocess_fn: Callable[[Any], ModelCtx]
+    preprocess_fn: Callable[[Any], tuple[ModelCtx, Tensor]]
     metrics: list[Metric]
     final_metrics: list[Metric]
     ema_model: Optional[ExponentialMovingAverage] = None

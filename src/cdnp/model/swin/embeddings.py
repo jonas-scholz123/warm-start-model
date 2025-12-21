@@ -98,7 +98,7 @@ class TimeEmbedding(FourierExpansionEmbedding):
     ) -> None:
         super().__init__(min_scale, max_scale, num_scales)
 
-    def forward(self, hours: torch.Tensor) -> torch.Tensor:
+    def forward(self, hours: torch.Tensor) -> torch.Tensor:  # type: ignore
         return super().forward(hours.float())
 
 

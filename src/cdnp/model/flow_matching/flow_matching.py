@@ -47,7 +47,7 @@ class CFGScaledModel(ModelWrapper):
         cfg_scale: float,
         label: torch.Tensor,
         ctx: ModelCtx,
-    ):
+    ):  # type: ignore
         t = torch.zeros(x.shape[0], device=x.device) + t
         if ctx.image_ctx is not None:
             x = torch.cat([x, ctx.image_ctx], dim=1)
@@ -55,7 +55,7 @@ class CFGScaledModel(ModelWrapper):
         extra = {}
         if ctx.warmth is not None:
             extra["warmth"] = ctx.warmth
-        result = padded_forward(self.model, x, t, extra=extra)
+        result = padded_forward(self.model, x, t, extra=extra)  # type: ignore
 
         self.nfe_counter += 1
         return result.to(dtype=torch.float32)
@@ -110,7 +110,7 @@ class FlowMatching(nn.Module):
         batch_size = trg.shape[0]
 
         if self.skewed_timesteps:
-            t = skewed_timestep_sample(batch_size, device=self.device)
+            t = skewed_timestep_sample(batch_size, device=self.device)  # type: ignore
         else:
             t = torch.rand(batch_size, device=self.device)
 

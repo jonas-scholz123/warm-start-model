@@ -139,7 +139,7 @@ class NoiseScheduleVP:
         self.schedule = schedule
         if schedule == "discrete":
             if betas is not None:
-                log_alphas = 0.5 * torch.log(1 - betas).cumsum(dim=0)
+                log_alphas = 0.5 * torch.log(1 - betas).cumsum(dim=0)  # type: ignore
             else:
                 assert alphas_cumprod is not None
                 log_alphas = 0.5 * torch.log(alphas_cumprod)
@@ -414,7 +414,7 @@ def model_wrapper(
         """
         with torch.enable_grad():
             x_in = x.detach().requires_grad_(True)
-            log_prob = classifier_fn(x_in, t_input, condition, **classifier_kwargs)
+            log_prob = classifier_fn(x_in, t_input, condition, **classifier_kwargs)  # type: ignore
             return torch.autograd.grad(log_prob.sum(), x_in)[0]
 
     def model_fn(x, t_continuous):
@@ -443,7 +443,7 @@ def model_wrapper(
             else:
                 x_in = torch.cat([x] * 2)
                 t_in = torch.cat([t_continuous] * 2)
-                c_in = torch.cat([unconditional_condition, condition])
+                c_in = torch.cat([unconditional_condition, condition])  # type: ignore
                 noise_uncond, noise = noise_pred_fn(x_in, t_in, cond=c_in).chunk(2)
                 return noise_uncond + guidance_scale * (noise - noise_uncond)
 
@@ -484,7 +484,7 @@ def weighted_cumsumexp_trapezoid_torch(a, x, b, cumsum=True):
     if b is not None:
         assert a.shape[0] == b.shape[0] and a.ndim == b.ndim
 
-    a_max = torch.amax(a, dim=0, keepdims=True)
+    a_max = torch.amax(a, dim=0, keepdims=True)  # type: ignore
 
     if b is not None:
         tmp = b * torch.exp(a - a_max)
@@ -587,7 +587,7 @@ class DPM_Solver_v3:
         """
         Return the noise prediction model.
         """
-        return self.model(x, t)
+        return self.model(x, t)  # type: ignore
 
     def convert_to_indexes(self, timesteps):
         logSNR_steps = self.noise_schedule.marginal_lambda(timesteps)

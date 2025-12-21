@@ -53,5 +53,5 @@ class Cifar10Dataset(Dataset):
     def __len__(self):
         return len(self.dataset)
 
-    def __getitem__(self, idx):
-        return self.dataset[idx]
+    def __getitem__(self, index):
+        return self.dataset[index]

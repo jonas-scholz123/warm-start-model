@@ -1,6 +1,6 @@
 import torch
 from diffusers import UNet2DModel
-from torch import nn
+from torch import IntTensor, nn
 from torch.distributions import Normal
 
 from cdnp.model.cnp import CNP
@@ -40,9 +40,9 @@ class CDNP(nn.Module):
         prd_dist = Normal(prd_dist.mean, prd_dist.stddev * self.std_mult)
 
         shape = (trg.shape[0],)
-        timesteps = (
+        timesteps: IntTensor = (
             torch.randint(0, self.num_timesteps - 1, shape).long().to(self.device)
-        )
+        )  # type: ignore
 
         noise = torch.randn_like(trg, device=self.device)
         noisy_x = self.noise_scheduler.add_noise(

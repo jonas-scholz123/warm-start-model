@@ -180,7 +180,7 @@ class SwinTransformer(nn.Module):
 
         if self.pad_dont_interpolate:
             # Pad input to target dimensions
-            x = geopad(x, target_height=self.height, target_width=self.width)
+            x, _, _ = geopad(x, target_height=self.height, target_width=self.width)
         else:
             x = interpolate_bilinear_channel_last(
                 x, height=self.height, width=self.width

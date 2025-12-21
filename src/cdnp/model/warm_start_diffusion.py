@@ -65,7 +65,7 @@ class WarmStartDiffusion(nn.Module):
 
     def forward(self, ctx: ModelCtx, trg: torch.Tensor) -> torch.Tensor:
         if self.prd_dist is None:
-            prd_dist = self.warm_start_model.predict(ctx)
+            prd_dist = self.warm_start_model.predict(ctx)  # type: ignore
         else:
             prd_dist = self.prd_dist
 
@@ -141,7 +141,7 @@ class WarmStartDiffusion(nn.Module):
         if ctx.image_ctx is not None:
             num_samples = ctx.image_ctx.shape[0]
         if self.prd_dist is None:
-            prd_dist = self.warm_start_model.predict(ctx)
+            prd_dist = self.warm_start_model.predict(ctx)  # type: ignore
             prd_dist = Normal(prd_dist.mean, prd_dist.stddev)
         else:
             prd_dist = self.prd_dist

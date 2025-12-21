@@ -1,6 +1,7 @@
 # %%
 from pathlib import Path
 
+import matplotlib
 import matplotlib.pyplot as plt
 import torch
 from cartopy import crs as ccrs
@@ -312,9 +313,6 @@ ground_truth = torch.stack([ds[i][3][..., 0, 0] for i in range(N_timesteps)], di
 ground_truth = ground_truth.unsqueeze(-1)
 plottable = torch.cat([ground_truth, all_forecasts], dim=-1)
 # %%
-import matplotlib
-
-from cdnp.plot.geoplot import GeoPlotter
 
 matplotlib.rcParams["mathtext.fontset"] = "custom"
 matplotlib.rcParams["mathtext.rm"] = "Bitstream Vera Sans"
@@ -323,7 +321,7 @@ matplotlib.rcParams["mathtext.bf"] = "Bitstream Vera Sans:bold"
 matplotlib.rcParams["mathtext.fontset"] = "stix"
 matplotlib.rcParams["font.family"] = "STIXGeneral"
 
-gp = GeoPlotter(map_width=3, map_height=1.5)
+gp = GeoPlotter(map_width=3, map_height=1.5)  # type: ignore
 
 
 fig = gp.plot_grid(

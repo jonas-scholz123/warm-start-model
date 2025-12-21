@@ -5,7 +5,7 @@ import torch
 from cdnp.model.ddpm import ModelCtx
 
 PreprocessFn = Callable[
-    tuple[torch.Tensor, torch.Tensor], tuple[ModelCtx, torch.Tensor]
+    [tuple[torch.Tensor, torch.Tensor]], tuple[ModelCtx, torch.Tensor]
 ]
 
 

@@ -265,7 +265,7 @@ class CDNPScheduler(SchedulerMixin, ConfigMixin):
                     f"`timesteps` must start before `self.config.train_timesteps`: {self.config.num_train_timesteps}."
                 )
 
-            timesteps = np.array(timesteps, dtype=np.int64)
+            timesteps = np.array(timesteps, dtype=np.int64)  # ty: ignore
             self.custom_timesteps = True
         else:
             if num_inference_steps > self.config.num_train_timesteps:
@@ -373,7 +373,10 @@ class CDNPScheduler(SchedulerMixin, ConfigMixin):
             )  # upcast for quantile calculation, and clamp not implemented for cpu half
 
         # Flatten sample for doing quantile calculation along each image
-        sample = sample.reshape(batch_size, channels * np.prod(remaining_dims))
+        sample = sample.reshape(
+            batch_size,
+            channels * np.prod(remaining_dims),  # ty: ignore
+        )  # ty: ignore
 
         abs_sample = sample.abs()  # "a certain percentile absolute pixel value"
 
@@ -414,8 +417,10 @@ class CDNPScheduler(SchedulerMixin, ConfigMixin):
         current_beta_t = 1 - current_alpha_t
 
         # 2. compute the predicted x_0
-        shifted = x_t - (1 - sqrt_alpha_bar_t) * x_T_mean
-        numerator = shifted - torch.sqrt(1 - alpha_bar_t) * pred_eps * x_T_std
+        shifted = x_t - (1 - sqrt_alpha_bar_t) * x_T_mean  # ty: ignore
+        numerator = (
+            shifted - torch.sqrt(1 - alpha_bar_t) * pred_eps * x_T_std
+        )  # ty: ignore
         x_0_pred = numerator / sqrt_alpha_bar_t
         if x_0_true is not None:
             x_0_pred = x_0_true
@@ -423,13 +428,15 @@ class CDNPScheduler(SchedulerMixin, ConfigMixin):
         x_0_coef = sqrt_alpha_bar_t_prev * current_beta_t / (1 - alpha_bar_t)
         x_t_coef = current_alpha_t.sqrt() * (1 - alpha_bar_t_prev) / (1 - alpha_bar_t)
         prev_mean = (
-            x_0_coef * (x_0_pred - x_T_mean) + x_t_coef * (x_t - x_T_mean) + x_T_mean
+            x_0_coef * (x_0_pred - x_T_mean)
+            + x_t_coef * (x_t - x_T_mean)
+            + x_T_mean  # ty: ignore
         )
 
         # 3. Add noise
         eps = torch.randn_like(x_t)
         variance = current_beta_t * (1 - alpha_bar_t_prev) / (1 - alpha_bar_t)
-        noise = x_T_std * variance.sqrt() * eps
+        noise = x_T_std * variance.sqrt() * eps  # ty: ignore
 
         x_prev = prev_mean + noise
 
