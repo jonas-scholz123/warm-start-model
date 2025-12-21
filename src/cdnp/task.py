@@ -60,12 +60,15 @@ def preprocess_colourisation(
 
 def preprocess_superresolution(
     batch: tuple[torch.Tensor, torch.Tensor],
-    patch_size: int,
+    scale_factor: int,
 ) -> tuple[ModelCtx, torch.Tensor]:
     x, _ = batch
     B, C, H, W = x.shape
 
-    low_res = interpolate(x, scale_factor=1 // patch_size, mode="bicubic")
+    low_res_H = H // scale_factor
+    low_res_W = W // scale_factor
+
+    low_res = interpolate(x, size=(low_res_H, low_res_W), mode="bicubic")
     low_res_upsampled = interpolate(low_res, size=(H, W), mode="bicubic")
 
     return ModelCtx(image_ctx=low_res_upsampled), x
