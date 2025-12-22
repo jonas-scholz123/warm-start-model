@@ -111,7 +111,7 @@ class WarmStartDiffusion(nn.Module):
             # We want the mean to be driven by the generative loss and the
             # std to be driven by the NLL loss.
             detached_prd_dist = Normal(prd_dist.mean.detach(), prd_dist.stddev)
-            loss += 0.01 * self.warm_start_model.nll(detached_prd_dist, trg)
+            loss += self.warm_start_model.nll(detached_prd_dist, trg)
 
         return loss
 
