@@ -1,0 +1,20 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: imgen
+  - model: warm_start_fm
+  - model_type: generative
+  - _self_
+
+model:
+  # Load static mean & std.
+  norm_param_path: ${paths.normalisation}/cifar10_normalisation.npz
+  warm_start_model: null
+  generative_model:
+    backbone:
+      in_channels: 9 # noised RGB image + Std + mean
+      out_channels: 3 # RGB image
+
+data:
+  trainloader:
+    batch_size: 128

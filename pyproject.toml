@@ -32,12 +32,25 @@ dependencies = [
     "h5netcdf>=1.6.1",
     "torchdiffeq>=0.2.5",
     "torchmetrics[image]>=1.7.4",
-    "mlbnb>=0.1.3",
+    "mlbnb==0.1.3",
     "ty>=0.0.1a16",
+    "datasets>=4.4.1",
 ]
 requires-python = ">=3.11.0"
 readme = "README.md"
 license = { text = "MIT" }
 
+[tool.ty.environment]
+root = ["./src"]
+
 [tool.ty.src]
-root = "./src"
+exclude = ["src/cdnp/model/meta", "src/explore", "src/cdnp/model/flow_matching"]
+
+[tool.ruff]
+exclude = ["src/cdnp/model/meta", "src/explore", "src/cdnp/model/flow_matching"]
+ignore = ["E741", "E731"]
+
+[tool.ty.rules]
+unresolved-attribute = "ignore"
+non-subscriptable = "ignore"
+unsupported-operator = "ignore"

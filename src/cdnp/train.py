@@ -1,5 +1,5 @@
 import warnings
-from typing import Callable, Optional
+from typing import Optional
 
 import hydra
 import numpy as np
@@ -75,7 +75,7 @@ class Trainer:
     plotter: Optional[CcgenPlotter]
     state: TrainerState
     preprocess_fn: PreprocessFn
-    metrics: list[Callable]
+    metrics: list[Metric]
 
     def __init__(
         self,
@@ -222,7 +222,11 @@ class Trainer:
         dry_run = self.cfg.execution.dry_run
 
         for batch in train_iter:
-            if self.state.step % self.cfg.output.eval_freq == 0 or dry_run:
+            if (
+                self.state.step % self.cfg.output.eval_freq == 0
+                and self.state.step != 0
+                or dry_run
+            ):
                 logger.info("Evaluating on validation set")
                 val_metrics = evaluate(
                     self.inference_model,
@@ -240,7 +244,11 @@ class Trainer:
                     s.best_val_loss = s.val_loss
                     self.save_checkpoint(CheckpointOccasion.BEST)
 
-            if self.state.step % self.cfg.output.plot_freq == 0 or dry_run:
+            if (
+                self.state.step % self.cfg.output.plot_freq == 0
+                and self.state.step != 0
+                or dry_run
+            ):
                 logger.info("Plotting predictions")
                 if self.plotter:
                     self.plotter.plot_prediction(self.inference_model, self.state.step)
@@ -250,7 +258,7 @@ class Trainer:
                 self.save_checkpoint(CheckpointOccasion.LATEST)
 
             if self.state.step % 500 == 0 and hasattr(self.model, "set_steps"):
-                self.model.set_steps(self.state.step)
+                self.model.set_steps(self.state.step)  # type: ignore
 
             self.model.train()
             self.train_step(batch)
@@ -262,7 +270,7 @@ class Trainer:
         logger.success("Finished training")
         if self.final_metrics:
             eval_loader = self.val_loader
-            if len(self.val_loader.dataset) < 50_000:
+            if len(self.val_loader.dataset) < 50_000:  # type: ignore
                 logger.warning(
                     "Validation set is small, using training set for final evaluation."
                 )

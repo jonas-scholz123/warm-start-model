@@ -4,6 +4,7 @@ defaults:
   - task: inpaint
   - model: cnp
   - model/backbone: small
+  - model_type: deterministic
   - _self_
 
 model:
@@ -11,9 +12,6 @@ model:
     out_channels: 6 # RGB image * (mean + stddev)
   min_std: 0.01 # Minimum std to stabilise
   
-execution:
-  train_steps: 5000000
-
 data:
   in_channels: 4 # masked RGB input + mask
   preprocess_fn:

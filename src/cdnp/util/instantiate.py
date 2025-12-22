@@ -10,7 +10,7 @@ from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath
 from mlbnb.types import Split
 from omegaconf import OmegaConf
-from torch import Generator
+from torch import Generator, Tensor
 from torch.nn import Module
 from torch.optim.lr_scheduler import LRScheduler
 from torch.optim.optimizer import Optimizer
@@ -36,7 +36,7 @@ class Experiment:
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
     plotter: Optional[CcgenPlotter]
-    preprocess_fn: Callable[[Any], ModelCtx]
+    preprocess_fn: Callable[[Any], tuple[ModelCtx, Tensor]]
     metrics: list[Metric]
     final_metrics: list[Metric]
     ema_model: Optional[ExponentialMovingAverage] = None
@@ -134,7 +134,7 @@ def load_config(
     all_overrides = [f"mode={mode}"] + (overrides or [])
 
     if not GlobalHydra.instance().is_initialized():
-        with initialize(config_path=config_path):
+        with initialize(config_path=config_path, version_base=None):
             cfg: Config = compose(  # type: ignore
                 config_name=config_name, overrides=all_overrides
             )

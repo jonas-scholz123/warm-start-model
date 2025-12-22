@@ -5,7 +5,7 @@ import torch
 from cdnp.model.ddpm import ModelCtx
 
 PreprocessFn = Callable[
-    tuple[torch.Tensor, torch.Tensor], tuple[ModelCtx, torch.Tensor]
+    [tuple[torch.Tensor, torch.Tensor]], tuple[ModelCtx, torch.Tensor]
 ]
 
 
@@ -28,8 +28,12 @@ def preprocess_inpaint(
     gen: torch.Generator,
     min_frac: float,
     max_frac: float,
+    seed: int | None = None,
 ) -> tuple[ModelCtx, torch.Tensor]:
     x, _ = batch
+
+    if seed is not None:
+        gen = torch.Generator().manual_seed(seed)
 
     frac = torch.rand(1, generator=gen).item()
     frac = frac * (max_frac - min_frac) + min_frac
@@ -42,6 +46,15 @@ def preprocess_inpaint(
     # Concat along the channel dimension
     ctx = torch.cat([x_masked, mask], dim=1)
     return ModelCtx(image_ctx=ctx), x
+
+
+def preprocess_colourisation(
+    batch: tuple[torch.Tensor, torch.Tensor],
+) -> tuple[ModelCtx, torch.Tensor]:
+    x, _ = batch
+    # Convert to grayscale by averaging the color channels
+    grayscale = x.mean(dim=1, keepdim=True)
+    return ModelCtx(image_ctx=grayscale), x
 
 
 def preprocess_weather_forecast(
@@ -77,7 +90,11 @@ def preprocess_weather_inpaint(
     gen: torch.Generator,
     min_frac: float,
     max_frac: float,
+    seed: int | None = None,
 ) -> tuple[ModelCtx, torch.Tensor]:
+    if seed is not None:
+        gen = torch.Generator().manual_seed(seed)
+
     zero_time, static, dyn, _ = batch
 
     B, lat, lon, time, var = dyn.shape
