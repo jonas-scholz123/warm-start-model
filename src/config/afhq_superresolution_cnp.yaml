@@ -1,0 +1,26 @@
+defaults:
+  - base
+  - data: afhq
+  - task: superresolution
+  - model: cnp
+  - model/backbone: tiny_no_attention
+  - model_type: deterministic
+  - _self_
+
+model:
+  backbone:
+    in_channels: 3 # low-res RGB input
+    out_channels: 6 # RGB Mean + Std
+  min_std: 0.01 # Minimum stddev to stabilise
+  device: ${runtime.device}
+
+data:
+  trainloader:
+    batch_size: 16
+  testloader:
+    batch_size: 8
+  preprocess_fn:
+    scale_factor: 8
+
+execution:
+  accumulate_steps: 32 # 512 effective batch size
