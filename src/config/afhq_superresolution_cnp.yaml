@@ -13,6 +13,7 @@ model:
     out_channels: 6 # RGB Mean + Std
   min_std: 0.01 # Minimum stddev to stabilise
   device: ${runtime.device}
+  residual: true
 
 data:
   trainloader:
