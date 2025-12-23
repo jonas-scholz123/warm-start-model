@@ -107,11 +107,11 @@ class WarmStartDiffusion(nn.Module):
             loss_weight = None
 
         loss = self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
-        if self.end_to_end and self.warm_start_model is not None:
-            # We want the mean to be driven by the generative loss and the
-            # std to be driven by the NLL loss.
-            detached_prd_dist = Normal(prd_dist.mean.detach(), prd_dist.stddev)
-            loss += self.warm_start_model.nll(detached_prd_dist, trg)
+        # if self.end_to_end and self.warm_start_model is not None:
+        # We want the mean to be driven by the generative loss and the
+        # std to be driven by the NLL loss.
+        # detached_prd_dist = Normal(prd_dist.mean.detach(), prd_dist.stddev)
+        # loss += self.warm_start_model.nll(detached_prd_dist, trg)
 
         return loss
 
