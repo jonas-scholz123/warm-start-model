@@ -89,11 +89,12 @@ if __name__ == "__main__":
         # "2025-07-23_15-24_sassy_unicorn_better_cnp",
         # "new_warmth_scaling",
         "2025-12-04_16-21_xenial_kangaroo"  # standard fm 0-100
+        "2025-12-06_10-11_brave_xenon"  # warm fm 0-100
     ]
     nfes = [2, 4, 6, 8, 12, 20, 50, 100]
     model = "latest_ema"
-    solvers = ["dpm_solver_3"]
-    default_skip_type = "logSNR"
+    solvers = ["midpoint"]
+    default_skip_type = "time_uniform"
     # num_samples = 50_000
     num_samples = 1000
     # context_fractions = [None]
