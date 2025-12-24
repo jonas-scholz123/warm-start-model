@@ -25,6 +25,7 @@ class WarmStartDiffusion(nn.Module):
         mean_only_ablation: bool = False,
         feature_only_ablation: bool = False,
         end_to_end: bool = True,
+        end_to_end_nll_weight: float = 0.01,
         norm_param_path: str | None = None,
     ):
         super().__init__()
@@ -45,6 +46,7 @@ class WarmStartDiffusion(nn.Module):
         self.mean_only_ablation = mean_only_ablation
         self.feature_only_ablation = feature_only_ablation
         self.min_std = min_std
+        self.nll_weight = end_to_end_nll_weight
 
         if norm_param_path is None:
             self.prd_dist = None
@@ -107,11 +109,8 @@ class WarmStartDiffusion(nn.Module):
             loss_weight = None
 
         loss = self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
-        # if self.end_to_end and self.warm_start_model is not None:
-        # We want the mean to be driven by the generative loss and the
-        # std to be driven by the NLL loss.
-        # detached_prd_dist = Normal(prd_dist.mean.detach(), prd_dist.stddev)
-        # loss += self.warm_start_model.nll(detached_prd_dist, trg)
+        if self.end_to_end and self.warm_start_model is not None:
+            loss += self.nll_weight * self.warm_start_model.nll(prd_dist, trg)
 
         return loss
 
