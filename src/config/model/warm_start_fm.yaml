@@ -1,4 +1,4 @@
-defaults: 
+defaults:
   - /generative_model: flow_matching
   - _self_
 
@@ -9,3 +9,5 @@ min_warmth: 0.0
 max_warmth: 1.0
 min_std: 0.01
 loss_weighting: false
+end_to_end: false
+end_to_end_nll_weight: 0.01

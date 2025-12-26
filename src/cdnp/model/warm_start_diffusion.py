@@ -24,12 +24,19 @@ class WarmStartDiffusion(nn.Module):
         max_warmth: float = 1.0,
         mean_only_ablation: bool = False,
         feature_only_ablation: bool = False,
+        end_to_end: bool = True,
+        end_to_end_nll_weight: float = 0.01,
         norm_param_path: str | None = None,
     ):
         super().__init__()
         if warm_start_model is None and norm_param_path is None:
             raise ValueError(
                 "Either warm_start_model or norm_param_path must be provided."
+            )
+
+        if warm_start_model is None and end_to_end:
+            raise ValueError(
+                "End-to-end training is not possible without a warm-start model."
             )
 
         self.warm_start_model = warm_start_model
@@ -39,6 +46,7 @@ class WarmStartDiffusion(nn.Module):
         self.mean_only_ablation = mean_only_ablation
         self.feature_only_ablation = feature_only_ablation
         self.min_std = min_std
+        self.nll_weight = end_to_end_nll_weight
 
         if norm_param_path is None:
             self.prd_dist = None
@@ -51,6 +59,13 @@ class WarmStartDiffusion(nn.Module):
             self.prd_dist = Normal(mean, std)
 
         self.loss_weighting = loss_weighting
+        self.end_to_end = end_to_end
+
+        if self.warm_start_model is not None:
+            if end_to_end:
+                self.warm_start_model.requires_grad_(True)
+            else:
+                self.warm_start_model.requires_grad_(False)
 
         self.scale_warmth = self.min_warmth != 1.0 or self.max_warmth != 1.0
         self.device = device
@@ -68,8 +83,11 @@ class WarmStartDiffusion(nn.Module):
             prd_dist = self.warm_start_model.predict(ctx)  # type: ignore
         else:
             prd_dist = self.prd_dist
+        mean = prd_dist.mean
+        std = prd_dist.stddev.detach()
 
-        std, warmth = self._get_warm_std(prd_dist.stddev)
+        std, warmth = self._get_warm_std(std)
+
         if self.mean_only_ablation:
             std = torch.ones_like(std, device=self.device)
             warmth = None
@@ -78,10 +96,10 @@ class WarmStartDiffusion(nn.Module):
             trg_n = trg
         else:
             # _n suffix = normalised space
-            trg_n = (trg - prd_dist.mean) / std
+            trg_n = (trg - mean) / std
 
         gen_model_ctx = ModelCtx(
-            image_ctx=self._build_image_ctx(ctx, prd_dist, std, trg_n.shape[0]),
+            image_ctx=self._build_image_ctx(ctx, mean, std, trg_n.shape[0]),
             warmth=warmth,
         )
 
@@ -90,7 +108,11 @@ class WarmStartDiffusion(nn.Module):
         else:
             loss_weight = None
 
-        return self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
+        loss = self.generative_model(gen_model_ctx, trg_n, loss_weight=loss_weight)
+        if self.end_to_end and self.warm_start_model is not None:
+            loss += self.nll_weight * self.warm_start_model.nll(prd_dist, trg)
+
+        return loss
 
     def _get_warm_std(
         self, prd_std: torch.Tensor, warmth: Optional[torch.Tensor] = None
@@ -117,15 +139,15 @@ class WarmStartDiffusion(nn.Module):
         return scaled_std, warmth.squeeze()
 
     def _build_image_ctx(
-        self, ctx: ModelCtx, prd_dist: Normal, std: torch.Tensor, batch_size: int
+        self, ctx: ModelCtx, mean: torch.Tensor, std: torch.Tensor, batch_size: int
     ) -> torch.Tensor:
-        shape = [batch_size] + list(prd_dist.mean.shape[1:])
+        shape = [batch_size] + list(mean.shape[1:])
 
         # Awkward order for backward compatibility.
         image_ctx = []
         if ctx.image_ctx is not None:
             image_ctx.append(ctx.image_ctx)
-        image_ctx.append(prd_dist.mean.expand(shape))
+        image_ctx.append(mean.expand(shape))
         image_ctx.append(std.expand(shape))
 
         return torch.cat(image_ctx, dim=1)
@@ -149,6 +171,7 @@ class WarmStartDiffusion(nn.Module):
         initial_warmth = kwargs.get("warmth", self._get_sample_warmth(kwargs))
 
         std = prd_dist.stddev
+        mean = prd_dist.mean
         if self.scale_warmth:
             # During sampling, for now, we use a constant (full) warmth.
             # TODO: Experiment with different warmth schedules.
@@ -162,7 +185,7 @@ class WarmStartDiffusion(nn.Module):
             warmth = None
 
         gen_model_ctx = ModelCtx(
-            image_ctx=self._build_image_ctx(ctx, prd_dist, std, num_samples),
+            image_ctx=self._build_image_ctx(ctx, mean, std, num_samples),
             warmth=warmth,
         )
 

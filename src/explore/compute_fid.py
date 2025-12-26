@@ -13,8 +13,9 @@ from cdnp.evaluate import FIDMetric, evaluate
 from cdnp.model.cdnp import CDNP
 from cdnp.task import preprocess_inpaint
 from cdnp.util.instantiate import Experiment
+from config.config import Config
 
-
+@torch.no_grad()
 def compute_fid(
     experiment: str,
     model_name: str,
@@ -35,7 +36,10 @@ def compute_fid(
         exp_path = Path("./_output") / experiment
 
     path = ExperimentPath.from_path(exp_path)
-    cfg = path.get_config()
+    cfg: Config = path.get_config()
+    cfg.data.trainloader.num_workers = 0
+    cfg.data.trainloader.persistent_workers = False
+    cfg.data.trainloader.prefetch_factor = None
     exp = Experiment.from_config(cfg)  # type: ignore
     model: CDNP = exp.model  # type: ignore
     cm = CheckpointManager(path)
@@ -88,14 +92,16 @@ if __name__ == "__main__":
         # "2025-07-21_22-38_playful_xenon",
         # "2025-07-23_15-24_sassy_unicorn_better_cnp",
         # "new_warmth_scaling",
-        "2025-12-04_16-21_xenial_kangaroo"  # standard fm 0-100
+        #"2025-12-04_16-21_xenial_kangaroo",  # standard fm 0-100
+        "cifar10_cold_fm_0_100",
+        "new_warmth_scaling_e2e_0_100"
     ]
-    nfes = [2, 4, 6, 8, 12, 20, 50, 100]
-    model = "latest_ema"
-    solvers = ["dpm_solver_3"]
-    default_skip_type = "logSNR"
-    # num_samples = 50_000
-    num_samples = 1000
+    nfes = [2, 4, 6, 8, 12, 20, 50]
+    model = "latest"
+    solvers = ["midpoint"]
+    default_skip_type = "time_uniform"
+    num_samples = 50_000
+    #num_samples = 10_000
     # context_fractions = [None]
     context_fractions = [
         0.0,
@@ -103,8 +109,12 @@ if __name__ == "__main__":
         0.02,
         0.05,
         0.1,
+        0.2,
         0.3,
+        0.4,
         0.5,
+        0.6,
+        0.7,
         0.8,
         0.9,
         0.95,
@@ -129,9 +139,13 @@ if __name__ == "__main__":
                 "fid",
             ]
         )
+    if "ctx_frac" not in df.columns:
+        df["ctx_frac"] = None
+    if "warmth" not in df.columns:
+        df["warmth"] = None
 
-    for experiment, nfe, solver, ctx_frac in product(
-        experiments, nfes, solvers, context_fractions
+    for nfe, solver, ctx_frac, experiment in product(
+        nfes, solvers, context_fractions, experiments
     ):
         # Log snr is bad for these very low NFEs because you need at least a few points
         # in the middle, that you don't get. Fall back to uniform.
@@ -144,6 +158,20 @@ if __name__ == "__main__":
             # Can't do midpoint with 1 step
             continue
 
+        warmth = 1.0
+
+        if ctx_frac == 0.5:
+            warmth = 0.2
+
+        if ctx_frac >= 0.55 and ctx_frac < 0.95:
+            warmth = 0.0
+
+        if ctx_frac >= 0.95:
+            warmth = 0.5
+
+        if ctx_frac > 0.98:
+            warmth = 1.0
+
         # Check if the current combination already exists
         exists = (
             (df["experiment"] == experiment)
@@ -153,6 +181,7 @@ if __name__ == "__main__":
             & (df["skip_type"] == skip_type)
             & (df["num_samples"] == num_samples)
             & (df["ctx_frac"] == ctx_frac)
+            & (df["warmth"] == warmth)
         ).any()
 
         if exists:
@@ -166,6 +195,7 @@ if __name__ == "__main__":
                 solver=solver,
                 skip_type=skip_type,
                 ctx_frac=ctx_frac,
+                warmth=warmth,
             )
 
             fid = result[f"fid_nfe={nfe}"]
@@ -180,9 +210,12 @@ if __name__ == "__main__":
                 "num_samples": num_samples,
                 "fid": fid,
                 "ctx_frac": ctx_frac,
+                "warmth": warmth,
             }
             print(new_row)
             print(f"Computed FID: {fid}")
             df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
             df.to_csv(csv_path, index=False)
             print(f"Results saved to {csv_path}")
+
+# %%
