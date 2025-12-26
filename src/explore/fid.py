@@ -15,7 +15,7 @@ if __name__ == "__main__":
         help="Model name to use",
     )
     parser.add_argument(
-        "--num_samples",
+        "--num-samples",
         type=int,
         default=50_000,
         help="Number of samples for FID evaluation",
