@@ -90,7 +90,7 @@ for i, nfe in enumerate(nfes):
         wsd_heatmap[i, j] = wsd_value
 
 #%%
-plt.figure(figsize=(len(context_fractions) + 1, len(nfes)))
+plt.figure(figsize=(len(context_fractions) * 0.9, len(nfes) *0.9))
 difference = baseline_heatmap - wsd_heatmap
 
 # Heatmap with printing the values in each cell:
@@ -100,33 +100,19 @@ sns.heatmap(
     yticklabels=nfes,
     cmap="seismic",
     cbar_kws={"label": "Baseline FID - WSD FID"},
-    vmin=-8,
-    vmax=8,
+    #vmin=-8,
+    #vmax=8,
+    center=0.0,
     annot=True,
     fmt=".1f",
 )
 
-plt.xlabel("Context Fraction")
-plt.ylabel("NFE")
+plt.xlabel("Fraction of Unmasked Context Pixels", fontsize=14)
+plt.ylabel("NFE", fontsize=14)
+plt.savefig("../../_results/context_strength_heatmap.pdf", bbox_inches="tight")
 plt.show()
-#%%
 
-plt.figure(figsize=(len(context_fractions) + 1, len(nfes)))
-
-ratio = 1 - (wsd_heatmap / baseline_heatmap)
-
-sns.heatmap(
-    ratio,
-    xticklabels=context_fractions,
-    yticklabels=nfes,
-    cmap="seismic",
-    cbar_kws={"label": "WSD FID / Baseline FID"},
-    annot=True,
-    fmt=".2f",
-    center=0.0
-)
-
-plt.show()
+# %%
 
 #%%
 
