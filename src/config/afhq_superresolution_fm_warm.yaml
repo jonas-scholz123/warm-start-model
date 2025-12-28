@@ -19,7 +19,7 @@ model:
     device: ${runtime.device}
   generative_model:
     backbone:
-      in_channels: 13 # noised RGB image + low-res RGB input + mask + CNP mean + CNP stddev
+      in_channels: 12 # noised RGB image + low-res RGB input + CNP mean + CNP stddev
       out_channels: 3 # RGB image
       use_warmth_embedding: true
 
