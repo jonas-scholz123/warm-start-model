@@ -85,6 +85,7 @@ class Trainer:
         train_loader: DataLoader,
         val_loader: DataLoader,
         generator: torch.Generator,
+        validation_generator: torch.Generator,
         experiment_path: ExperimentPath,
         checkpoint_manager: CheckpointManager,
         scheduler: Optional[LRScheduler],
@@ -102,6 +103,7 @@ class Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.generator = generator
+        self.validation_generator = validation_generator
         self.experiment_path = experiment_path
         self.checkpoint_manager = checkpoint_manager
         self.scheduler = scheduler
@@ -191,6 +193,7 @@ class Trainer:
             exp.train_loader,
             exp.val_loader,
             exp.generator,
+            exp.validation_generator,
             exp.experiment_path,
             exp.checkpoint_manager,
             exp.scheduler,
@@ -228,6 +231,8 @@ class Trainer:
                 or dry_run
             ):
                 logger.info("Evaluating on validation set")
+                # Always want the same validation samples.
+                self.validation_generator.manual_seed(0)
                 val_metrics = evaluate(
                     self.inference_model,
                     self.val_loader,

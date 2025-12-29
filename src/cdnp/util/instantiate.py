@@ -33,6 +33,7 @@ class Experiment:
     optimizer: Optimizer
     scheduler: Optional[LRScheduler]
     generator: Generator
+    validation_generator: Generator
     experiment_path: ExperimentPath
     checkpoint_manager: CheckpointManager
     plotter: Optional[CcgenPlotter]
@@ -54,14 +55,17 @@ class Experiment:
         exp = instantiate(cfg)
         rng = exp.rng.generator.manual_seed(cfg.execution.seed)
         cpu_rng = exp.rng.cpu_generator.manual_seed(cfg.execution.seed + 1)
+        validation_rng = exp.rng.validation_generator.manual_seed(
+            cfg.execution.seed + 2
+        )
 
         trainset = make_dataset(exp.data, Split.TRAIN, cpu_rng)
         valset = make_dataset(exp.data, Split.VAL, cpu_rng)
         testset = make_dataset(exp.data, Split.TEST, cpu_rng)
 
         train_loader: DataLoader = exp.data.trainloader(trainset, generator=cpu_rng)
-        val_loader: DataLoader = exp.data.testloader(valset, generator=cpu_rng)
-        test_loader: DataLoader = exp.data.testloader(testset, generator=cpu_rng)
+        val_loader: DataLoader = exp.data.testloader(valset, generator=validation_rng)
+        test_loader: DataLoader = exp.data.testloader(testset, generator=validation_rng)
 
         model: Module = exp.model.to(cfg.runtime.device)
         _log_num_params(model)
@@ -101,6 +105,7 @@ class Experiment:
             optimizer=optimizer,
             scheduler=scheduler,
             generator=rng,
+            validation_generator=validation_rng,
             experiment_path=experiment_path,
             checkpoint_manager=checkpoint_manager,
             plotter=plotter,
