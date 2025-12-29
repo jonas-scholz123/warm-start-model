@@ -41,7 +41,7 @@ output:
   plot_freq: 5000
   use_tqdm: true
   log_level: INFO
-  metrics: 
+  metrics:
     - _target_: cdnp.evaluate.LossMetric
   final_metrics: []
 
@@ -51,6 +51,10 @@ rng:
     device: ${runtime.device}
 
   cpu_generator:
+    _target_: torch.Generator
+    device: cpu
+
+  validation_generator:
     _target_: torch.Generator
     device: cpu
 
