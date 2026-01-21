@@ -90,7 +90,7 @@ if __name__ == "__main__":
         # "new_warmth_scaling",
         #"2025-12-04_16-21_xenial_kangaroo",  # standard fm 0-100
         #"2025-12-06_10-11_brave_xenon",  # warm fm 0-100
-        "2025-12-28_22-39_witty_bear", # SR warm FM
+        #"2025-12-28_22-39_witty_bear", # SR warm FM
         "2025-12-21_18-30_delightful_lion", # SR standard FM
     ]
     nfes = [2, 4, 6, 8, 12, 20, 50]

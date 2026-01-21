@@ -598,3 +598,6 @@ new_warmth_scaling_e2e_0_100,latest,12,midpoint,time_uniform,1000,3.630859375,0.
 new_warmth_scaling_e2e_0_100,latest,12,midpoint,time_uniform,1000,1.951171875,0.95
 new_warmth_scaling_e2e_0_100,latest,12,midpoint,time_uniform,1000,0.90576171875,0.98
 new_warmth_scaling_e2e_0_100,latest,12,midpoint,time_uniform,1000,0.57958984375,0.99
+2025-12-21_18-30_delightful_lion,latest_ema,2,midpoint,time_uniform,50000,8.3203125,
+2025-12-21_18-30_delightful_lion,latest_ema,2,dpm_solver_3,time_uniform,50000,12.4765625,
+2025-12-21_18-30_delightful_lion,latest_ema,4,midpoint,time_uniform,50000,8.46875,
