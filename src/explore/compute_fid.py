@@ -93,34 +93,31 @@ if __name__ == "__main__":
         # "2025-07-23_15-24_sassy_unicorn_better_cnp",
         # "new_warmth_scaling",
         #"2025-12-04_16-21_xenial_kangaroo",  # standard fm 0-100
-        "cifar10_cold_fm_0_100",
-        "new_warmth_scaling_e2e_0_100"
+        #"2025-12-06_10-11_brave_xenon",  # warm fm 0-100
+        #"2025-12-28_22-39_witty_bear", # SR warm FM
+        "2025-12-21_18-30_delightful_lion", # SR standard FM
     ]
     nfes = [2, 4, 6, 8, 12, 20, 50]
-    model = "latest"
-    solvers = ["midpoint"]
-    default_skip_type = "time_uniform"
+    model = "latest_ema"
+    solvers = ["midpoint", "dpm_solver_3"]
+    default_skip_type = "logSNR"
     num_samples = 50_000
-    #num_samples = 10_000
-    # context_fractions = [None]
-    context_fractions = [
-        0.0,
-        0.01,
-        0.02,
-        0.05,
-        0.1,
-        0.2,
-        0.3,
-        0.4,
-        0.5,
-        0.6,
-        0.7,
-        0.8,
-        0.9,
-        0.95,
-        0.98,
-        0.99,
-    ]
+    #num_samples = 1000
+    context_fractions = [None]
+    #context_fractions = [
+    #    0.0,
+    #    0.01,
+    #    0.02,
+    #    0.05,
+    #    0.1,
+    #    0.3,
+    #    0.5,
+    #    0.8,
+    #    0.9,
+    #    0.95,
+    #    0.98,
+    #    0.99,
+    #]
 
     all_args = []
 

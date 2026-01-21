@@ -1,6 +1,7 @@
 from typing import Callable
 
 import torch
+from torch.nn.functional import interpolate
 
 from cdnp.model.ddpm import ModelCtx
 
@@ -55,6 +56,22 @@ def preprocess_colourisation(
     # Convert to grayscale by averaging the color channels
     grayscale = x.mean(dim=1, keepdim=True)
     return ModelCtx(image_ctx=grayscale), x
+
+
+def preprocess_superresolution(
+    batch: tuple[torch.Tensor, torch.Tensor],
+    scale_factor: int,
+) -> tuple[ModelCtx, torch.Tensor]:
+    x, _ = batch
+    B, C, H, W = x.shape
+
+    low_res_H = H // scale_factor
+    low_res_W = W // scale_factor
+
+    low_res = interpolate(x, size=(low_res_H, low_res_W), mode="bicubic")
+    low_res_upsampled = interpolate(low_res, size=(H, W), mode="bicubic")
+
+    return ModelCtx(image_ctx=low_res_upsampled), x
 
 
 def preprocess_weather_forecast(

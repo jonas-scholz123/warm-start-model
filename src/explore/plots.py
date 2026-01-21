@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.figure import Figure
 import torch
 from mlbnb.checkpoint import CheckpointManager
 from mlbnb.paths import ExperimentPath
@@ -20,6 +21,21 @@ def unnormalise(tensor: torch.Tensor) -> torch.Tensor:
     normed = tensor * stds + means
     return torch.clamp(normed, 0.0, 1.0)
 
+dpi = 100
+def plot_grid_no_pad(images: list[torch.Tensor], num_samples: int, imsize: int, fname: str, title: str="") -> None:
+    width = num_samples * imsize / dpi
+    height = len(images) * imsize / dpi
+    fig = plt.figure(figsize=(width, height), dpi=dpi)
+
+    images = torch.cat(images, dim=0)
+
+    grid = make_grid(images.cpu(), nrow=num_samples, normalize=True, padding=0)
+    plt.imshow(grid.permute(1, 2, 0))
+    plt.axis("off")
+    if title:
+        plt.title(title)
+    plt.subplots_adjust(left=0, right=1, top=1, bottom=0, wspace=0, hspace=0)
+    fig.savefig(fname, dpi=dpi, pad_inches=0)
 
 # %%
 
@@ -42,14 +58,19 @@ class Args:
         self.experiment = experiment
         self.model = model
 
+root = Path("/home/jonas/Documents/code/denoising-np")
 
-args = Args(experiment="2025-07-07_11-16_witty_narwhal", model="best_ema")
+#args = Args(experiment="2025-07-07_11-16_witty_narwhal", model="best_ema")
+args = Args(experiment="2025-12-28_22-39_witty_bear", model="latest_ema") # SR WSD
 
 exp_path = Path(args.experiment)
 if not exp_path.exists():
-    exp_path = Path("../../_weights") / args.experiment
+    exp_path = root / "_weights" / args.experiment
 if not exp_path.exists():
-    exp_path = Path("../../_output") / args.experiment
+    exp_path = root / "_output" / args.experiment
+if not exp_path.exists():
+    raise ValueError(f"Experiment path {exp_path} does not exist.")
+print(f"Using experiment path: {exp_path}")
 
 path = ExperimentPath.from_path(exp_path)
 cfg: Config = path.get_config()  # type: ignore
@@ -68,28 +89,8 @@ mean = cfg.data.dataset.norm_means
 std = cfg.data.dataset.norm_stds
 # %%
 
-metric = FIDMetric(num_samples=50_000, device="cuda", means=mean, stds=std)
-
-if len(exp.val_loader) < 50_000:
-    print(
-        "Validation set is smaller than 50_000 samples, using the training set for FID evaluation."
-    )
-    dataloader = exp.train_loader
-else:
-    dataloader = exp.val_loader
-
-result = evaluate(
-    model=model_to_load,
-    dataloader=dataloader,
-    preprocess_fn=exp.preprocess_fn,
-    metrics=[metric],
-    use_tqdm=True,
-)
-print(result)
-# %%
-
 num_samples = 8
-num_repeats = 10
+num_repeats = 2
 
 batch = next(iter(exp.val_loader))
 ctx, trg = exp.preprocess_fn(batch)
@@ -114,6 +115,27 @@ plt.imshow(grid.permute(1, 2, 0))
 plt.axis("off")
 plt.savefig("celeba_samples.png", bbox_inches="tight", dpi=300)
 plt.show()
+#%%
+num_samples = 8
+num_repeats = 4
+nfe = 16
+
+batch = next(iter(exp.val_loader))
+ctx, trg = exp.preprocess_fn(batch)
+ctx = ctx.to("cuda")
+trg = trg.to("cuda")
+assert ctx.image_ctx is not None
+
+ctx.image_ctx = ctx.image_ctx[:num_samples]
+trg = trg[:num_samples]
+lowres = ctx.image_ctx
+
+outs = [trg, lowres]
+for _ in range(num_repeats):
+    out = model_to_load.sample(ctx, num_samples=num_samples, nfe=nfe, solver="midpoint")
+    outs.append(out)
+#%%
+plot_grid_no_pad(outs, num_samples=num_samples, imsize=256, fname="afhq_samples.jpeg", title=f"NFE={nfe}")
 # %%
 
 num_samples = 1

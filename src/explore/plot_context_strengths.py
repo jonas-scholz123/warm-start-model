@@ -148,7 +148,7 @@ sns.heatmap(
 #%%
 plt.figure(figsize=(len(context_fractions) + 1, len(nfes)))
 sns.heatmap(
-    baseline_heatmap,
+    ratio,
     xticklabels=context_fractions,
     yticklabels=nfes,
     cbar_kws={"label": "Baseline FID"},
