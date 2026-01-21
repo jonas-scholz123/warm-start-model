@@ -81,6 +81,7 @@ class OutputConfig:
 class RngConfig:
     generator: dict
     cpu_generator: dict
+    validation_generator: dict
 
 
 @dataclass
