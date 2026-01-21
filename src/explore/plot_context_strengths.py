@@ -7,8 +7,11 @@ import seaborn as sns
 
 csv_path = "../../fid_results.csv"
 baseline_exp = "2025-12-04_16-21_xenial_kangaroo"
-wsd_exp = "2025-07-23_15-24_sassy_unicorn_better_cnp"
-nfes = [2, 4, 6, 8, 12, 20, 50, 100]
+#wsd_exp = "2025-12-06_10-11_brave_xenon"
+#baseline_exp = "2025-07-21_22-38_playful_xenon"
+#wsd_exp = "new_warmth_scaling"
+wsd_exp = "new_warmth_scaling_e2e_0_100"
+nfes = [2, 4, 6, 8, 12, 20, 50]
 context_fractions = [
     0.0,
     0.01,
@@ -42,6 +45,7 @@ for i, nfe in enumerate(nfes):
             & (df["experiment"] == baseline_exp)
         ]
         if wsd_df.empty:
+            print(f"No WSD data for NFE={nfe}, ctx_frac={ctx_frac}")
             wsd_value = -1
         else:
             wsd_value = wsd_df["fid"].min()
@@ -59,11 +63,36 @@ plt.figure(figsize=(len(context_fractions) + 1, len(nfes)))
 ratio = baseline_heatmap / wsd_heatmap
 
 sns.heatmap(
-    baseline_heatmap,
+    ratio,
     xticklabels=context_fractions,
     yticklabels=nfes,
     cmap="bwr",
-    cbar_kws={"label": "WSD FID / Baseline FID"},
+    cbar_kws={"label": "Baseline FID / WSD FID"},
+    vmin=0.6,
+    vmax=1.4,
 )
 
 plt.xlabel("Context Fraction")
+plt.show()
+# %%
+
+# %%
+print(baseline_heatmap[0, 0], wsd_heatmap[0, 0])
+#%%
+difference = baseline_heatmap - wsd_heatmap
+
+# Heatmap with printing the values in each cell:
+sns.heatmap(
+    difference,
+    xticklabels=context_fractions,
+    yticklabels=nfes,
+    cmap="bwr",
+    cbar_kws={"label": "Baseline FID - WSD FID"},
+    vmin=-10,
+    vmax=10,
+    annot=True,
+    fmt=".1f",
+)
+
+plt.xlabel("Context Fraction")
+plt.show()
