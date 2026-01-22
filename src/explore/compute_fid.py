@@ -88,6 +88,25 @@ def compute_fid(
     )
     return result
 
+def get_warmth(ctx_frac: float | None) -> float:
+    warmth = 1.0
+    if ctx_frac is None:
+        return warmth
+
+    if ctx_frac == 0.5:
+        warmth = 0.2
+
+    if ctx_frac is not None and ctx_frac >= 0.55 and ctx_frac < 0.95:
+        warmth = 0.0
+
+    if ctx_frac is not None and ctx_frac >= 0.95:
+        warmth = 0.5
+
+    if ctx_frac is not None and ctx_frac > 0.98:
+        warmth = 1.0
+
+    return warmth
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Compute FID for experiments.")
@@ -141,8 +160,8 @@ if __name__ == "__main__":
     context_fractions = [None]
 
     for experiment in experiments:
-        csv_path = f"fid_results_{experiment}.csv"
-        if Path(csv_path).exists():
+        csv_path = Path(f"fid_results_{experiment}.csv")
+        if csv_path.exists():
             df = pd.read_csv(csv_path)
         else:
             df = pd.DataFrame(
@@ -177,19 +196,9 @@ if __name__ == "__main__":
                 print("Skipping high NFE midpoint")
                 continue
 
-            warmth = 1.0
+            warmth = get_warmth(ctx_frac)
 
-            if ctx_frac == 0.5:
-                warmth = 0.2
-
-            if ctx_frac >= 0.55 and ctx_frac < 0.95:
-                warmth = 0.0
-
-            if ctx_frac >= 0.95:
-                warmth = 0.5
-
-            if ctx_frac > 0.98:
-                warmth = 1.0
+            print(f"Computing FID for {experiment}, model={model}, nfe={nfe}, solver={solver}, skip_type={skip_type}, ctx_frac={ctx_frac}, warmth={warmth}")
 
             # Check if the current combination already exists
             exists = (
@@ -199,8 +208,8 @@ if __name__ == "__main__":
                 & (df["solver"] == solver)
                 & (df["skip_type"] == skip_type)
                 & (df["num_samples"] == num_samples)
-                & (df["ctx_frac"] == ctx_frac)
-                & (df["warmth"] == warmth)
+                & ((df["ctx_frac"] == ctx_frac) if ctx_frac is not None else df["ctx_frac"].isnull())
+                & ((df["warmth"] == warmth) if warmth is not None else df["warmth"].isnull())
             ).any()
 
             if exists:
