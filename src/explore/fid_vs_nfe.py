@@ -13,17 +13,11 @@ class PlotConfig:
 
 plot_configs = [
     PlotConfig(
-        title="AFHQ Superresolution",
-        experiment_map={
-            "2025-12-21_18-30_delightful_lion": "Flow Matching",
-            "2025-12-28_22-39_witty_bear": "Warm FM",
-        },
-    ),
-    PlotConfig(
         title="Celeba-64x64 Inpainting",
         experiment_map={
             "celeba_cold_fm": "Flow Matching",
             "2025-07-29_22-57_quirky_jaguar": "Warm FM",
+            "2025-09-05_19-38_vibrant_fish_e2e": "Warm FM E2E",
         },
     ),
     PlotConfig(
@@ -44,12 +38,22 @@ plot_configs = [
             "feature_only_ablation": "Feature Only",
         },
     ),
+    PlotConfig(
+        title="AFHQ Superresolution",
+        experiment_map={
+            "2025-12-21_18-30_delightful_lion": "Flow Matching",
+            "2025-12-28_22-39_witty_bear": "Warm FM",
+        },
+    ),
 ]
 
 paths = [
     "/home/jonas/Documents/code/denoising-np/fid_results.csv",
     "/home/jonas/Documents/code/denoising-np/_results/fid_results.csv",
     "/home/jonas/Documents/code/denoising-np/_results/fid_results_celeba.csv",
+    "/home/jonas/Documents/code/denoising-np/fid_results_2025-12-21_18-30_delightful_lion.csv",
+    "/home/jonas/Documents/code/denoising-np/fid_results_2025-12-28_22-39_witty_bear.csv",
+    "/home/jonas/Documents/code/denoising-np/fid_results_2025-09-05_19-38_vibrant_fish_e2e.csv"
 ]
 
 alphabet = "abcdefghijklmnopqrstuvwxyz"
@@ -66,6 +70,7 @@ df = pd.concat(dfs, ignore_index=True).sort_values(["experiment", "nfe"])
 # df = df[df["nfe"] >= 2]
 #df = df[df["solver"] == "midpoint"]
 df = df[df["nfe"] % 2 == 0]
+df = df[df["nfe"] <= 50]
 
 
 num_cols = len(plot_configs)
@@ -73,7 +78,7 @@ num_rows = 1
 width = 4 * num_cols
 height = 3.2 * num_rows
 
-fig, axs = plt.subplots(num_rows, num_cols, figsize=(width, height), sharey=True)
+fig, axs = plt.subplots(num_rows, num_cols, figsize=(width, height), sharey=False)
 
 for i, pc in enumerate(plot_configs):
     ax = axs[i]
@@ -94,7 +99,8 @@ for i, pc in enumerate(plot_configs):
     ax.set_xticks(nfes)
     ax.set_xticklabels(nfes)
     ax.set_xlabel("NFE")
-    ax.set_ylim(0.8, 6)
+    #ax.set_ylim(0.7, 6)
+    ax.set_ylim(None, 6)
     # minor ticks off
     ax.minorticks_off()
     ax.legend()
@@ -103,7 +109,7 @@ for i, pc in enumerate(plot_configs):
     ax.set_title(title)
 
 axs[0].set_ylabel("Fréchet Inception Distance (FID)")
-fig.subplots_adjust(wspace=0.05)
+fig.subplots_adjust(wspace=0.1)
 
 fig.savefig("fid_vs_nfe_all_experiments.pdf", bbox_inches="tight")
 

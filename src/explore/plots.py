@@ -29,7 +29,9 @@ def plot_grid_no_pad(images: list[torch.Tensor], num_samples: int, imsize: int, 
 
     images = torch.cat(images, dim=0)
 
-    grid = make_grid(images.cpu(), nrow=num_samples, normalize=True, padding=0)
+    images = unnormalise(images)
+
+    grid = make_grid(images.cpu(), nrow=num_samples, normalize=False, padding=0)
     plt.imshow(grid.permute(1, 2, 0))
     plt.axis("off")
     if title:
@@ -60,8 +62,10 @@ class Args:
 
 root = Path("/home/jonas/Documents/code/denoising-np")
 
-#args = Args(experiment="2025-07-07_11-16_witty_narwhal", model="best_ema")
-args = Args(experiment="2025-12-28_22-39_witty_bear", model="latest_ema") # SR WSD
+#args = Args(experiment="2025-07-07_11-16_witty_narwhal", model="latest_ema")
+args = Args(experiment="new_warmth_scaling_end_to_end4", model="latest")  # CIFAR10 WSD E2E
+#args = Args(experiment="2025-12-28_22-39_witty_bear", model="latest_ema") # SR WSD
+#args = Args(experiment="2025-07-29_22-57_quirky_jaguar", model="latest_ema") # CelebA WSD
 
 exp_path = Path(args.experiment)
 if not exp_path.exists():
@@ -88,37 +92,52 @@ model_to_load: CDNP = model_to_load  # type: ignore
 mean = cfg.data.dataset.norm_means
 std = cfg.data.dataset.norm_stds
 # %%
-
 num_samples = 8
-num_repeats = 2
+num_repeats = 3
+offset = 0
+fid=8
 
 batch = next(iter(exp.val_loader))
 ctx, trg = exp.preprocess_fn(batch)
 ctx = ctx.to("cuda")
 trg = trg.to("cuda")
 assert ctx.image_ctx is not None
-ctx.image_ctx = ctx.image_ctx[5 : 5 + num_samples]
-trg = trg[5 : 5 + num_samples]
+ctx.image_ctx = ctx.image_ctx[offset : offset + num_samples]
+trg = trg[offset : offset + num_samples]
 masked_x = ctx.image_ctx[:, :-1, :, :]
 
 outs = [trg, masked_x]
 for _ in range(num_repeats):
-    out = model_to_load.sample(ctx, num_samples=num_samples)
+    out = model_to_load.sample(ctx, num_samples=num_samples, nfe=fid, solver="midpoint")
     outs.append(out)
-out = torch.cat(outs, dim=0)
 
-size = 2
-plt.figure(figsize=(size * num_samples, size * num_repeats))
+plot_grid_no_pad(outs, num_samples=num_samples, imsize=64, fname="celeba_inpainting_samples.png", title=None)
+#%%
 
-grid = make_grid(out.cpu(), nrow=num_samples, normalize=True)
-plt.imshow(grid.permute(1, 2, 0))
-plt.axis("off")
-plt.savefig("celeba_samples.png", bbox_inches="tight", dpi=300)
-plt.show()
+num_samples = 8
+num_repeats = 3
+offset = 0
+fid=8
+
+batch = next(iter(exp.val_loader))
+ctx, trg = exp.preprocess_fn(batch)
+ctx = ctx.to("cuda")
+trg = trg.to("cuda")
+assert ctx.image_ctx is not None
+ctx.image_ctx = ctx.image_ctx[offset : offset + num_samples]
+trg = trg[offset : offset + num_samples]
+masked_x = ctx.image_ctx[:, :-1, :, :]
+
+outs = [trg, masked_x]
+for _ in range(num_repeats):
+    out = model_to_load.sample(ctx, num_samples=num_samples, nfe=fid, solver="midpoint")
+    outs.append(out)
+
+plot_grid_no_pad(outs, num_samples=num_samples, imsize=128, fname="cifar10_inpainting_samples.png", title=None)
 #%%
 num_samples = 8
-num_repeats = 4
-nfe = 16
+num_repeats = 2
+nfe = 8
 
 batch = next(iter(exp.val_loader))
 ctx, trg = exp.preprocess_fn(batch)
@@ -135,7 +154,7 @@ for _ in range(num_repeats):
     out = model_to_load.sample(ctx, num_samples=num_samples, nfe=nfe, solver="midpoint")
     outs.append(out)
 #%%
-plot_grid_no_pad(outs, num_samples=num_samples, imsize=256, fname="afhq_samples.jpeg", title=f"NFE={nfe}")
+plot_grid_no_pad(outs, num_samples=num_samples, imsize=256, fname="afhq_samples.jpeg", title=None)
 # %%
 
 num_samples = 1

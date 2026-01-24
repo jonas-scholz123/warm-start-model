@@ -1,0 +1,16 @@
+experiment,model,nfe,solver,skip_type,num_samples,fid,ctx_frac,warmth
+2025-12-21_18-30_delightful_lion,latest_ema,2,midpoint,time_uniform,50000,8.3203125,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,2,dpm_solver_3,time_uniform,50000,12.4765625,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,4,midpoint,time_uniform,50000,8.46875,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,4,dpm_solver_3,time_uniform,50000,9.7265625,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,6,midpoint,time_uniform,50000,7.015625,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,6,dpm_solver_3,logSNR,50000,4.640625,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,8,midpoint,time_uniform,50000,5.8046875,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,8,dpm_solver_3,logSNR,50000,3.978515625,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,12,midpoint,time_uniform,50000,4.1796875,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,12,dpm_solver_3,logSNR,50000,2.0078125,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,20,midpoint,time_uniform,50000,2.74609375,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,20,dpm_solver_3,logSNR,50000,1.5927734375,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,10,midpoint,time_uniform,50000,4.8828125,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,10,dpm_solver_3,logSNR,50000,2.8515625,,1.0
+2025-12-21_18-30_delightful_lion,latest_ema,50,dpm_solver_3,logSNR,50000,1.599609375,,1.0
