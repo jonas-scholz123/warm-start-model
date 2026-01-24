@@ -17,22 +17,24 @@ plot_configs = [
         experiment_map={
             "celeba_cold_fm": "Flow Matching",
             "2025-07-29_22-57_quirky_jaguar": "Warm FM",
-            "2025-09-05_19-38_vibrant_fish_e2e": "Warm FM E2E",
+            #"2025-09-05_19-38_vibrant_fish_e2e": "Warm FM E2E",
         },
     ),
     PlotConfig(
         title="CIFAR10-32x32 Inpainting",
         experiment_map={
             "2025-07-21_22-38_playful_xenon": "Flow Matching",
-            "new_warmth_scaling": "Warm FM",
-            "new_warmth_scaling_end_to_end4": "Warm FM E2E",
+            #"new_warmth_scaling": "Warm FM",
+            # TODO?
+            "new_warmth_scaling_end_to_end4": "Warm FM",
         },
     ),
     PlotConfig(
         title="CIFAR10-32x32 Inp. (All Ablations)",
         experiment_map={
             "2025-07-21_22-38_playful_xenon": "Flow Matching",
-            "new_warmth_scaling": "Warm FM",
+            #"new_warmth_scaling": "Warm FM",
+            "new_warmth_scaling_end_to_end4": "Warm FM",
             "mean_only_continuation": "Mean Only",
             "2025-07-30_18-12_optimistic_narwhal": "No Warmth Blending",
             "feature_only_ablation": "Feature Only",
@@ -43,6 +45,7 @@ plot_configs = [
         experiment_map={
             "2025-12-21_18-30_delightful_lion": "Flow Matching",
             "2025-12-28_22-39_witty_bear": "Warm FM",
+            "2025-12-28_22-39_witty_bear_e2e": "Warm FM E2E",
         },
     ),
 ]
@@ -53,6 +56,7 @@ paths = [
     "/home/jonas/Documents/code/denoising-np/_results/fid_results_celeba.csv",
     "/home/jonas/Documents/code/denoising-np/fid_results_2025-12-21_18-30_delightful_lion.csv",
     "/home/jonas/Documents/code/denoising-np/fid_results_2025-12-28_22-39_witty_bear.csv",
+    "/home/jonas/Documents/code/denoising-np/fid_results_2025-12-28_22-39_witty_bear_e2e.csv",
     "/home/jonas/Documents/code/denoising-np/fid_results_2025-09-05_19-38_vibrant_fish_e2e.csv"
 ]
 
