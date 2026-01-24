@@ -99,7 +99,7 @@ experiment_to_title = {
 
 results = {}
 for experiment in experiments:
-    with open(f"../../frequency_results_{experiment}.pkl", "rb") as f:
+    with open(f"../../_results/frequency_results_{experiment}.pkl", "rb") as f:
         results[experiment] = pickle.load(f)
         wl: np.ndarray = results[experiment]["wl"]
 
@@ -190,7 +190,87 @@ for col, experiment in enumerate(experiments):
 
 fig.savefig("weather_forecasting_eval.pdf", bbox_inches="tight")
 
+# %%
+
+fig, axs = plt.subplots(
+    1,
+    6,
+    figsize=(16, 3),
+    gridspec_kw={"width_ratios": [1, 1, 0.15, 0.8, 0.8, 0.05]},
+)
+
+alphabet = "abcdefghijklmnopqrstuvwxyz"
+
+exp_names_list = list(exp_names.items())
+for i, (exp_name, title) in enumerate(exp_names_list):
+    csv_path = f"../../_results/wind_results_{exp_name}.csv"
+    df = pd.read_csv(csv_path)
+    df = df[
+        (df["n_members"] == 50)
+        & (df["n_0_times"] == 40)
+        & (df["metric"] == "crps")
+        & (df["variable"] == var)
+    ]
+
+    nfes_crps = exp_nfes[exp_name]
+    nfes_crps = [nfe for nfe in nfes_crps if nfe in df["nfe"].unique()]
+
+    for nfe in nfes_crps:
+        nfe_df = df[df["nfe"] == nfe].sort_values("time_delta_hrs")
+        axs[i].plot(
+            nfe_df["time_delta_hrs"] / 24,
+            nfe_df["value"],
+            marker="x",
+            label=f"NFE={nfe}",
+            color=colors[nfe],
+        )
+
+    letter = alphabet[i]
+    axs[i].set_title(f"{letter}) {title}")
+    axs[i].set_xlabel("Lead Time (days)")
+    axs[i].grid(True, linestyle="--", alpha=0.3)
+    axs[i].set_ylim(1.6, 2.25)
+    axs[i].set_xlim(2, 5.2)
+
+axs[0].set_ylabel(f"CRPS for {var_name}")
+axs[0].legend()
+axs[1].legend()
+axs[1].set_yticklabels([])
+
+# Spacer
+axs[2].set_visible(False)
+
+# 3. Frequency heatmap (baseline)
+# 4. Frequency heatmap (ours)
+nfes_heatmap = [2, 4, 6, 8, 10, 12, 14, 16, 20, 30, 50, 100]
+for i, experiment in enumerate(experiments):
+    sampler_results = results[experiment]
+    plottable = sampler_results["midpoint"]
+
+    sns.heatmap(
+        plottable.T,
+        xticklabels=nfes_heatmap,
+        yticklabels=yticklabels if i == 0 else [],
+        cmap="vlag",
+        vmin=0.6,
+        vmax=1.1,
+        center=1.0,
+        ax=axs[i + 3],
+        cbar=i == 1,
+        cbar_ax=axs[5] if i == 1 else None,
+    )
+    letter = alphabet[i + 2]
+    axs[i + 3].set_title(
+        f"{letter}) $\eta(\lambda)$, {experiment_to_title[experiment]}"
+    )
+    axs[i + 3].set_xlabel("NFE")
+
+axs[3].set_ylabel("$\lambda$ (km)")
+axs[5].set_ylabel("$\eta(\lambda)$")
+
+plt.subplots_adjust(wspace=0.05)
+
+fig.savefig(f"combined_eval_{var}.pdf", bbox_inches="tight")
+
 plt.show()
 # %%
-# yticklabels = [f"{w:.0e}" if idx % 5 == 0 else "" for idx, w in enumerate(wl.numpy())]
-experiment
