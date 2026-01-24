@@ -28,11 +28,11 @@ var_name = "10m U Wind"
 normed = False
 
 fig, axs = plt.subplots(
-    1, len(exp_names), figsize=(5 * len(exp_names), 2.8), sharey=True
+    1, len(exp_names), figsize=(3.5 * len(exp_names), 4), sharey=True
 )
 
 for i, (exp_name, title) in enumerate(exp_names.items()):
-    csv_path = f"../../wind_results_{exp_name}.csv"
+    csv_path = f"../../_results/wind_results_{exp_name}.csv"
     df = pd.read_csv(csv_path)
 
     metric = "crps"
