@@ -17,24 +17,22 @@ plot_configs = [
         experiment_map={
             "celeba_cold_fm": "Flow Matching",
             "2025-07-29_22-57_quirky_jaguar": "Warm FM",
-            #"2025-09-05_19-38_vibrant_fish_e2e": "Warm FM E2E",
+            "2025-09-05_19-38_vibrant_fish_e2e": "Warm FM E2E",
         },
     ),
     PlotConfig(
         title="CIFAR10-32x32 Inpainting",
         experiment_map={
             "2025-07-21_22-38_playful_xenon": "Flow Matching",
-            #"new_warmth_scaling": "Warm FM",
-            # TODO?
-            "new_warmth_scaling_end_to_end4": "Warm FM",
+            "new_warmth_scaling": "Warm FM",
+            "new_warmth_scaling_end_to_end4": "Warm FM E2E",
         },
     ),
     PlotConfig(
         title="CIFAR10-32x32 Inp. (All Ablations)",
         experiment_map={
             "2025-07-21_22-38_playful_xenon": "Flow Matching",
-            #"new_warmth_scaling": "Warm FM",
-            "new_warmth_scaling_end_to_end4": "Warm FM",
+            "new_warmth_scaling": "Warm FM",
             "mean_only_continuation": "Mean Only",
             "2025-07-30_18-12_optimistic_narwhal": "No Warmth Blending",
             "feature_only_ablation": "Feature Only",
@@ -104,7 +102,7 @@ for i, pc in enumerate(plot_configs):
     ax.set_xticklabels(nfes)
     ax.set_xlabel("NFE")
     #ax.set_ylim(0.7, 6)
-    ax.set_ylim(None, 6)
+    ax.set_ylim(None, 6.5)
     # minor ticks off
     ax.minorticks_off()
     ax.legend()
