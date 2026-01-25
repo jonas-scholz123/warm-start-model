@@ -60,6 +60,7 @@ class WarmStartDiffusion(nn.Module):
 
         self.loss_weighting = loss_weighting
         self.end_to_end = end_to_end
+        print("End-to-end training:", end_to_end)
 
         if self.warm_start_model is not None:
             if end_to_end:
@@ -83,7 +84,7 @@ class WarmStartDiffusion(nn.Module):
             prd_dist = self.warm_start_model.predict(ctx)  # type: ignore
         else:
             prd_dist = self.prd_dist
-        mean = prd_dist.mean
+        mean = prd_dist.mean.detach()
         std = prd_dist.stddev.detach()
 
         std, warmth = self._get_warm_std(std)
