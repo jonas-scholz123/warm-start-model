@@ -1,0 +1,14 @@
+experiment,model,nfe,solver,skip_type,num_samples,fid,ctx_frac,warmth
+old_warmth_scaling_no_blend,latest_ema,2,midpoint,time_uniform,1000,37.28125,,1.0
+old_warmth_scaling_no_blend,latest_ema,2,dpm_solver_3,time_uniform,1000,45.65625,,1.0
+old_warmth_scaling_no_blend,latest_ema,4,midpoint,time_uniform,1000,34.34375,,1.0
+old_warmth_scaling_no_blend,latest_ema,4,dpm_solver_3,time_uniform,1000,36.4375,,1.0
+old_warmth_scaling_no_blend,latest_ema,6,midpoint,time_uniform,1000,34.03125,,1.0
+old_warmth_scaling_no_blend,latest_ema,6,dpm_solver_3,logSNR,1000,35.09375,,1.0
+old_warmth_scaling_no_blend,latest_ema,8,midpoint,time_uniform,1000,33.9375,,1.0
+old_warmth_scaling_no_blend,latest_ema,8,dpm_solver_3,logSNR,1000,35.53125,,1.0
+old_warmth_scaling_no_blend,latest_ema,10,midpoint,time_uniform,1000,33.90625,,1.0
+old_warmth_scaling_no_blend,latest_ema,10,dpm_solver_3,logSNR,1000,34.6875,,1.0
+old_warmth_scaling_no_blend,latest_ema,12,dpm_solver_3,logSNR,1000,34.09375,,1.0
+old_warmth_scaling_no_blend,latest_ema,20,dpm_solver_3,logSNR,1000,34.0,,1.0
+old_warmth_scaling_no_blend,latest_ema,50,dpm_solver_3,logSNR,1000,33.9375,,1.0

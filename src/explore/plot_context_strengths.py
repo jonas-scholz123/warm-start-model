@@ -4,7 +4,8 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-csv_path = "../../fid_results.csv"
+
+csv_path = "../../fid_results_context_strenghts.csv"
 #csv_path = "../../fid_results_mid_run.csv"
 #csv_path2 = "../../fid_results.old.csv"
 
@@ -89,6 +90,8 @@ for i, nfe in enumerate(nfes):
         baseline_heatmap[i, j] = baseline_value
         wsd_heatmap[i, j] = wsd_value
 
+# %%
+
 #%%
 plt.figure(figsize=(len(context_fractions) * 0.7, len(nfes) *0.7))
 difference = baseline_heatmap - wsd_heatmap
@@ -99,7 +102,7 @@ sns.heatmap(
     xticklabels=context_fractions,
     yticklabels=nfes,
     cmap="PuOr_r",
-    #cbar_kws={"label": "Baseline FID - WSD FID"},
+    cbar_kws={"label": "FID Improvement"},
     #vmin=-8,
     #vmax=8,
     center=0.0,
@@ -110,7 +113,7 @@ sns.heatmap(
 
 plt.xlabel("Fraction of Visible Context Pixels, $\\rho$")
 plt.ylabel("NFE")
-plt.title("CIFAR-10 FID Improvement (Baseline FID - WSD FID)")
+#plt.title("CIFAR-10 FID Improvement (Baseline FID - WSD FID)")
 plt.savefig("../../_results/context_strength_heatmap.pdf", bbox_inches="tight")
 plt.show()
 

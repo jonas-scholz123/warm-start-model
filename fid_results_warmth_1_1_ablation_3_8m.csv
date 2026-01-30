@@ -1,0 +1,15 @@
+experiment,model,nfe,solver,skip_type,num_samples,fid,ctx_frac,warmth
+warmth_1_1_ablation_3_8m,latest_ema,2,midpoint,time_uniform,50000,5.3203125,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,2,dpm_solver_3,time_uniform,50000,14.3046875,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,4,midpoint,time_uniform,50000,2.001953125,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,4,dpm_solver_3,time_uniform,50000,4.53515625,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,6,midpoint,time_uniform,50000,1.5478515625,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,6,dpm_solver_3,logSNR,50000,1.6123046875,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,8,midpoint,time_uniform,50000,1.423828125,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,8,dpm_solver_3,logSNR,50000,1.75390625,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,10,midpoint,time_uniform,50000,1.365234375,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,10,dpm_solver_3,logSNR,50000,1.357421875,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,12,midpoint,time_uniform,50000,1.3310546875,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,12,dpm_solver_3,logSNR,50000,1.19140625,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,20,dpm_solver_3,logSNR,50000,1.2158203125,,1.0
+warmth_1_1_ablation_3_8m,latest_ema,50,dpm_solver_3,logSNR,50000,1.2373046875,,1.0
