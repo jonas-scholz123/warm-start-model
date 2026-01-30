@@ -83,7 +83,7 @@ class WarmStartDiffusion(nn.Module):
             prd_dist = self.warm_start_model.predict(ctx)  # type: ignore
         else:
             prd_dist = self.prd_dist
-        mean = prd_dist.mean
+        mean = prd_dist.mean.detach()
         std = prd_dist.stddev.detach()
 
         std, warmth = self._get_warm_std(std)
@@ -133,7 +133,7 @@ class WarmStartDiffusion(nn.Module):
             )
         warmth = warmth[:, None, None, None]
 
-        prd_std = prd_std.clamp(min=1.0 - warmth)
+        # prd_std = prd_std.clamp(min=1.0 - warmth)
 
         scaled_std = warmth * prd_std + (1 - warmth) * base_std
         return scaled_std, warmth.squeeze()

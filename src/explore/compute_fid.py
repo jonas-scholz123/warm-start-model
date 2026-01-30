@@ -192,7 +192,7 @@ if __name__ == "__main__":
                 # Can't do midpoint with 1 step
                 continue
 
-            if nfe >= 12 and solver == "midpoint":
+            if nfe >= 20 and solver == "midpoint":
                 print("Skipping high NFE midpoint")
                 continue
 
