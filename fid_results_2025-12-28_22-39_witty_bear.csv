@@ -24,3 +24,7 @@ experiment,model,nfe,solver,skip_type,num_samples,fid,ctx_frac,warmth
 2025-12-28_22-39_witty_bear,latest_ema,20,midpoint,time_uniform,50000,1.5986328125,,1.0
 2025-12-28_22-39_witty_bear,latest_ema,50,dpm_solver_3,logSNR,50000,1.6220703125,,1.0
 2025-12-28_22-39_witty_bear,latest_ema,50,midpoint,time_uniform,50000,1.615234375,,1.0
+2025-12-28_22-39_witty_bear,latest_ema,50,dpm_solver_3,logSNR,50000,1.6220703125,,1.0
+2025-12-28_22-39_witty_bear,latest_ema,50,midpoint,time_uniform,50000,1.615234375,,1.0
+2025-12-28_22-39_witty_bear,latest_ema,20,midpoint,time_uniform,50000,1.5986328125,,1.0
+2025-12-28_22-39_witty_bear,latest_ema,50,dpm_solver_3,logSNR,50000,1.6220703125,,1.0
