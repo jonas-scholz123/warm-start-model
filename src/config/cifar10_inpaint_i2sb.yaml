@@ -1,0 +1,16 @@
+defaults:
+  - base
+  - data: cifar10
+  - task: inpaint
+  - model: i2sb
+  - model_type: generative
+  - _self_
+
+model:
+  backbone:
+    in_channels: 7   # xt(3) + masked_image(3) + mask(1)
+    out_channels: 3  # predicted label (normalised noise direction)
+
+data:
+  trainloader:
+    batch_size: 128
