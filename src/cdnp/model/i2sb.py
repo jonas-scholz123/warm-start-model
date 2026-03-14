@@ -70,9 +70,10 @@ class I2SB(nn.Module):
         self.T = num_timesteps
         self.clip_denoise = clip_denoise
 
-        # Build marginal std tensors from the beta schedule
+        # Build marginal std tensors from the beta schedule.
+        # Index 0 = t=0 (clean), index T = t=T (corrupted).
         betas = make_beta_schedule(n_timestep=num_timesteps)
-        betas = torch.cat([torch.zeros(1), betas])  # index 0 = t=0
+        betas = torch.cat([torch.zeros(1), betas])  # shape: (T+1,)
 
         std_fwd = torch.sqrt(betas.cumsum(0).clamp(min=0))
         std_bwd = torch.sqrt((betas.flip(0)).cumsum(0).flip(0).clamp(min=0))
@@ -111,6 +112,30 @@ class I2SB(nn.Module):
         return (xt - x0) / std_fwd.clamp(min=1e-8)
 
     # ------------------------------------------------------------------
+    # Posterior p(x_{t-1} | x_t, x_0) — ported from official p_posterior
+    # ------------------------------------------------------------------
+
+    def _p_posterior(
+        self,
+        nprev: torch.Tensor,
+        n: torch.Tensor,
+        x_n: torch.Tensor,
+        x0: torch.Tensor,
+    ) -> torch.Tensor:
+        """Reverse step: sample x_{t-1} ~ p(x_{t-1} | x_t, x_0_pred).
+
+        Follows official i2sb/diffusion.py p_posterior exactly:
+            std_delta = sqrt(std_fwd[n]^2 - std_fwd[nprev]^2)
+            coefs via compute_gaussian_product_coef(std_fwd[nprev], std_delta)
+        """
+        std_n = self.std_fwd[n][:, None, None, None]
+        std_nprev = self.std_fwd[nprev][:, None, None, None]
+        std_delta = (std_n**2 - std_nprev**2).clamp(min=1e-8).sqrt()
+
+        mu_x0, mu_xn, var = compute_gaussian_product_coef(std_nprev, std_delta)
+        return mu_x0 * x0 + mu_xn * x_n + var.sqrt() * torch.randn_like(x0)
+
+    # ------------------------------------------------------------------
     # Construct corrupted endpoint X₁ from context
     # ------------------------------------------------------------------
 
@@ -126,46 +151,6 @@ class I2SB(nn.Module):
         return x_ctx + (1 - visible) * torch.randn_like(x_ctx)
 
     # ------------------------------------------------------------------
-    # Posterior  p(x_{t-1} | x_t, x_0_pred, x_1)  — from official diffusion.py
-    # ------------------------------------------------------------------
-
-    def _p_posterior(
-        self,
-        step: torch.Tensor,
-        x0: torch.Tensor,
-        x1: torch.Tensor,
-        xt: torch.Tensor,
-    ) -> torch.Tensor:
-        # std for t-1 and t
-        std_n = self.std_sb[step - 1][:, None, None, None]  # t-1
-        std_c = self.std_sb[step][:, None, None, None]       # t
-        std_delta = (std_c**2 - std_n**2).clamp(min=1e-8).sqrt()
-
-        mu_x0c, mu_x1c, var = compute_gaussian_product_coef(
-            self.std_fwd[step - 1][:, None, None, None],
-            std_delta,
-        )
-        mu_x0n, mu_x1n, _ = compute_gaussian_product_coef(
-            self.std_fwd[step][:, None, None, None],
-            std_delta,
-        )
-        # Eq from official repo:  mean = mu_x0c*x0 + mu_x1c*xt  adjusted for posterior
-        mean = (
-            mu_x0n / mu_x0c * (xt - mu_x1c * x1)
-            + (1 - mu_x0n / mu_x0c) * x0
-            + mu_x0n * x1  # ← accounts for the x1 endpoint
-        )
-        # Simpler version matching the official ddpm_sampling:
-        mu_x0t, mu_x1t, _ = compute_gaussian_product_coef(
-            self.std_fwd[step - 1][:, None, None, None],
-            self.std_bwd[step][:, None, None, None],
-        )
-        # Use official formula
-        mean = mu_x0t * x0 + mu_x1t * x1
-        std = std_n
-        return mean + std * torch.randn_like(xt)
-
-    # ------------------------------------------------------------------
     # Forward pass (training)
     # ------------------------------------------------------------------
 
@@ -178,65 +163,68 @@ class I2SB(nn.Module):
         xt, _ = self._q_sample(step, x0, x1)
         label = self._compute_label(step, x0, xt)
 
-        # xt(3) + masked_image(3) + mask(1) = 7 channels
-        t_norm = (step.float() - 1) / (self.T - 1)  # [0, 1]
+        # Pass integer timesteps in [0, T-1] — UNet2DModel sinusoidal embedding
+        # is designed for the full integer range, not [0, 1] floats.
         backbone_input = torch.cat([xt, ctx.image_ctx], dim=1)
-        pred = padded_forward(self.backbone, backbone_input, t_norm)
+        pred = padded_forward(self.backbone, backbone_input, step - 1)
 
         visible = ctx.image_ctx[:, 3:]
         # Supervise only on unobserved pixels
-        mask = (1 - visible)
+        mask = 1 - visible
         loss = F.mse_loss(pred * mask, label * mask)
         return loss
 
     # ------------------------------------------------------------------
-    # Sampling (reverse DDPM-style)
+    # Sampling (reverse DDPM-style, ported from official ddpm_sampling)
     # ------------------------------------------------------------------
 
     @torch.no_grad()
     def sample(self, ctx: ModelCtx, num_samples: int, nfe: int | None = None, **kwargs) -> torch.Tensor:
         assert ctx.image_ctx is not None
-        visible = ctx.image_ctx[:, 3:]   # (B, 1, H, W)
-        x1 = self._get_x1(ctx)          # start from corrupted image
+        visible = ctx.image_ctx[:, 3:]          # (B, 1, H, W)
+        known_pixels = ctx.image_ctx[:, :3]     # observed pixel values
+        x1 = self._get_x1(ctx)                 # corrupted image = starting point
 
         steps = nfe if nfe is not None else self.T
-        # Subsample timestep indices evenly
+        # Integer timestep sequence: T, T-1, ..., 1  (length = steps)
         ts = torch.linspace(self.T, 1, steps, dtype=torch.long, device=self.device)
 
         xt = x1.clone()
-        for i, t_val in enumerate(ts):
-            step = t_val.expand(xt.shape[0])  # (B,)
+        for i in range(len(ts) - 1):
+            n = ts[i].expand(xt.shape[0])      # current step
+            nprev = ts[i + 1].expand(xt.shape[0])  # previous (smaller) step
 
-            # Predict x0 from current xt
-            t_norm = (step.float() - 1) / (self.T - 1)
+            # Predict x0 from xt at step n
             backbone_input = torch.cat([xt, ctx.image_ctx], dim=1)
-            pred_label = padded_forward(self.backbone, backbone_input, t_norm)
+            pred_label = padded_forward(self.backbone, backbone_input, n - 1)
 
-            # Recover x0 from label: label = (xt - x0) / std_fwd[t]  →  x0 = xt - label * std_fwd
-            std_fwd = self.std_fwd[step][:, None, None, None]
+            # Recover x0: label = (xt - x0) / std_fwd[n]  →  x0 = xt - label * std_fwd
+            std_fwd = self.std_fwd[n][:, None, None, None]
             x0_pred = xt - pred_label * std_fwd
 
             if self.clip_denoise:
                 x0_pred = x0_pred.clamp(-1, 1)
 
-            # Re-insert known pixels: keep visible pixels from x1 (the masked image)
-            x0_pred = visible * ctx.image_ctx[:, :3] + (1 - visible) * x0_pred
+            # Reverse step for unknown pixels via true posterior p(x_{t-1} | x_t, x0_pred)
+            xt_prev = self._p_posterior(nprev, n, xt, x0_pred)
 
-            # Step to t-1 (or stop at t=1)
-            if i < len(ts) - 1:
-                prev_step = ts[i + 1].expand(xt.shape[0])
-                mu_x0 = self.mu_x0[prev_step][:, None, None, None]
-                mu_x1 = self.mu_x1[prev_step][:, None, None, None]
-                std = self.std_sb[prev_step][:, None, None, None]
-                xt = mu_x0 * x0_pred + mu_x1 * x1 + std * torch.randn_like(x0_pred)
-                # Re-insert known pixels at noisy level too
-                std_bwd = self.std_bwd[prev_step][:, None, None, None]
-                x1_noised = ctx.image_ctx[:, :3] + std_bwd * torch.randn_like(x0_pred)
-                xt = visible * x1_noised + (1 - visible) * xt
-            else:
-                xt = x0_pred
+            # Re-insert known pixels at the correct bridge marginal noise level for step t-1:
+            # q(x_{t-1} | x_0=known, x_1=known) = N(known, std_sb[t-1]^2)
+            std_sb_prev = self.std_sb[nprev][:, None, None, None]
+            xt_known = known_pixels + std_sb_prev * torch.randn_like(known_pixels)
 
-        return xt
+            xt = visible * xt_known + (1 - visible) * xt_prev
+
+        # Final denoising step at t=1 → t=0: just return x0 prediction
+        n = ts[-1].expand(xt.shape[0])
+        backbone_input = torch.cat([xt, ctx.image_ctx], dim=1)
+        pred_label = padded_forward(self.backbone, backbone_input, n - 1)
+        std_fwd = self.std_fwd[n][:, None, None, None]
+        x0_pred = xt - pred_label * std_fwd
+        if self.clip_denoise:
+            x0_pred = x0_pred.clamp(-1, 1)
+        # Restore known pixels cleanly
+        return visible * known_pixels + (1 - visible) * x0_pred
 
     def make_plot(self, ctx: ModelCtx, num_samples: int = 0) -> list[torch.Tensor]:
         return [self.sample(ctx, num_samples) for _ in range(4)]
