@@ -387,6 +387,11 @@ class GriddedWeatherTask(
         dyn_ctx = torch.from_numpy(dyn_ctx.to_numpy()).permute(2, 1, 0, 3)
         trg_tensor = torch.from_numpy(trg.to_numpy()).permute(2, 1, 0, 3)
 
+        # Replace NaN values (e.g. sea_surface_temperature over land) with 0.
+        # After normalisation, 0 represents the variable mean.
+        dyn_ctx = torch.nan_to_num(dyn_ctx, nan=0.0)
+        trg_tensor = torch.nan_to_num(trg_tensor, nan=0.0)
+
         ctx_tensor = self.normalise_ctx(dyn_ctx)
         trg_tensor = self.normalise_trg(trg_tensor)
 

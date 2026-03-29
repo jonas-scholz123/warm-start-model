@@ -1,0 +1,28 @@
+defaults:
+  - _self_
+  - host: desktop
+
+dataset:
+  _target_: cdnp.data.era5.make_gridded_weather_task
+  _partial_: true
+  # TODO move the code from otter over to here.
+  data_source:
+    _target_: cdnp.data.era5.ZarrDatasource.from_path
+    path: ???
+  norm_path: ???
+  start_date: 1979-01-01
+  end_date: 2017-12-31
+  val_start_date: 2018-01-01
+  val_end_date: 2018-12-31
+  num_context_frames: 2
+  num_target_frames: 1
+  temporal_resolution_hours: 6
+  # All Pangu variables included (no exclusions)
+  ctx_variables_to_exclude: []
+  trg_variables_to_exclude: []
+
+num_classes: null
+# 5 surface dynamic + 6 multilevel dynamic * 13 levels = 83
+in_channels: 83
+height: 121
+width: 240

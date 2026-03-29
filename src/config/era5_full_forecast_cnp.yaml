@@ -1,0 +1,31 @@
+defaults:
+  - base
+  - data: era5_full
+  - task: forecast
+  - model: cnp
+  - model/backbone: no_attention
+  - _self_
+
+model:
+  residual: true
+  backbone:
+    in_channels: 171 # 2 context frames * 83 variables + 5 static
+    out_channels: 166 # 83 mean + 83 std
+  min_std: 0.01
+
+execution:
+  train_steps: 5000000
+
+data:
+  trainloader:
+    batch_size: 4
+  testloader:
+    batch_size: 8
+
+optimizer:
+  lr: 1e-4
+
+output:
+  metrics:
+    - _target_: cdnp.evaluate.LossMetric
+    - _target_: cdnp.evaluate.CnpRmseMetric
