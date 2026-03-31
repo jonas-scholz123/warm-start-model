@@ -1,2 +1,3 @@
 _target_: cdnp.model.cnp.CNP
 device: ${runtime.device}
+correlation_rank: 0
